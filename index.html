@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1a56db">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Diário de Obra">
+    <title>Diário de Obra</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/idb@8/build/umd.js"></script>
+
+    <script>
+        if ("serviceWorker" in navigator) {
+            navigator.serviceWorker.register("./sw.js").catch(() => {});
+        }
+    </script>
+
+    <style>
+        :root {
+            --blue-main: #1a56db;
+            --blue-dark: #1e40af;
+            --blue-light: #dbeafe;
+            --amber: #d97706;
+            --amber-light: #fef3c7;
+            --surface: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --green: #059669;
+            --red: #dc2626;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'IBM Plex Sans', sans-serif;
+            background-color: var(--surface);
+            color: var(--text-main);
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        .app-header {
+            background: var(--blue-main);
+            border-bottom: 3px solid #1e3a8a;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 1rem;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+        }
+
+        .header-brand .icon-wrap {
+            width: 36px;
+            height: 36px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            font-size: 16px;
+        }
+
+        .header-brand h1 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        .header-brand span {
+            font-size: 0.7rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: rgba(255,255,255,0.6);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            display: block;
+            margin-top: -2px;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            color: #fff;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+            transition: background 0.3s;
+        }
+        .status-dot.online { background: #10b981; }
+
+        /* ── Layout ── */
+        .main-content {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 1.5rem 1rem 3rem;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.25rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .card-header .section-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--blue-light);
+            color: var(--blue-main);
+            border-radius: 8px;
+            display: grid;
+            place-items: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .card-header h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-main);
+        }
+
+        /* ── Form fields ── */
+        .field-group {
+            display: grid;
+            gap: 1rem;
+        }
+
+        .field-group.cols-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .field-group.cols-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        @media (max-width: 600px) {
+            .field-group.cols-2,
+            .field-group.cols-3 { grid-template-columns: 1fr; }
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-family: 'IBM Plex Sans', sans-serif;
+            color: var(--text-main);
+            background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+        }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus {
+            border-color: var(--blue-main);
+            box-shadow: 0 0 0 3px rgba(26,86,219,0.12);
+        }
+
+        .field textarea {
+            resize: vertical;
+            min-height: 90px;
+        }
+
+        /* Serviço tipo — botões de seleção */
+        .service-type-group {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .service-type-btn {
+            flex: 1;
+            min-width: 100px;
+            padding: 10px 8px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.18s;
+            text-align: center;
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+
+        .service-type-btn:hover {
+            border-color: var(--blue-main);
+            color: var(--blue-main);
+        }
+
+        .service-type-btn.active {
+            border-color: var(--blue-main);
+            background: var(--blue-main);
+            color: #fff;
+        }
+
+        /* ── Diary input row ── */
+        .diary-input-row {
+            display: grid;
+            grid-template-columns: 160px 1fr auto;
+            gap: 8px;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1.5px dashed var(--border);
+        }
+
+        @media (max-width: 600px) {
+            .diary-input-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .diary-input-row input[type="date"] {
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-family: 'IBM Plex Mono', monospace;
+            color: var(--text-main);
+            background: #fff;
+            outline: none;
+            width: 100%;
+        }
+
+        .diary-input-row input[type="date"]:focus {
+            border-color: var(--blue-main);
+            box-shadow: 0 0 0 3px rgba(26,86,219,0.12);
+        }
+
+        .diary-input-row textarea {
+            padding: 10px 12px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-family: 'IBM Plex Sans', sans-serif;
+            color: var(--text-main);
+            background: #fff;
+            outline: none;
+            resize: vertical;
+            min-height: 70px;
+            width: 100%;
+        }
+
+        .diary-input-row textarea:focus {
+            border-color: var(--blue-main);
+            box-shadow: 0 0 0 3px rgba(26,86,219,0.12);
+        }
+
+        /* ── Buttons ── */
+        .btn-add {
+            background: var(--blue-main);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            font-family: 'IBM Plex Sans', sans-serif;
+            transition: background 0.2s;
+            align-self: flex-start;
+            margin-top: 2px;
+        }
+
+        .btn-add:hover { background: var(--blue-dark); }
+
+        .btn-primary {
+            background: var(--blue-main);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .btn-primary:hover { background: var(--blue-dark); }
+        .btn-primary:active { transform: scale(0.98); }
+
+        .btn-secondary {
+            background: #fff;
+            color: var(--text-muted);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            transition: background 0.2s;
+        }
+
+        .btn-secondary:hover { background: #f1f5f9; }
+
+        .btn-danger-text {
+            background: none;
+            border: none;
+            color: var(--red);
+            cursor: pointer;
+            font-size: 0.85rem;
+            padding: 6px;
+            border-radius: 6px;
+            transition: background 0.15s;
+            font-family: 'IBM Plex Sans', sans-serif;
+        }
+
+        .btn-danger-text:hover { background: #fee2e2; }
+
+        /* ── Diary entries list ── */
+        .diary-entries { display: flex; flex-direction: column; gap: 10px; }
+
+        .diary-entry {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-left: 4px solid var(--blue-main);
+            border-radius: 8px;
+            padding: 14px 16px;
+            display: grid;
+            grid-template-columns: 140px 1fr auto;
+            gap: 12px;
+            align-items: flex-start;
+            animation: slideIn 0.2s ease;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            .diary-entry { grid-template-columns: 1fr auto; }
+            .diary-entry .entry-date { grid-column: 1; }
+            .diary-entry .entry-text { grid-column: 1 / -1; grid-row: 2; }
+            .diary-entry .entry-actions { grid-row: 1; grid-column: 2; }
+        }
+
+        .entry-date {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--blue-main);
+            background: var(--blue-light);
+            padding: 4px 8px;
+            border-radius: 5px;
+            white-space: nowrap;
+            text-align: center;
+            align-self: flex-start;
+        }
+
+        .entry-text {
+            font-size: 0.88rem;
+            color: var(--text-main);
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .entry-actions { display: flex; gap: 4px; }
+
+        .empty-diary {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.88rem;
+        }
+
+        .empty-diary i {
+            font-size: 2rem;
+            color: #cbd5e1;
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        /* ── Footer actions ── */
+        .footer-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* ── Toast ── */
+        .toast {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            padding: 12px 18px;
+            border-radius: 10px;
+            color: #fff;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 999;
+            display: none;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            max-width: 320px;
+            animation: slideUp 0.25s ease;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .toast.success { background: var(--green); }
+        .toast.error { background: var(--red); }
+        .toast.info { background: var(--blue-main); }
+
+        /* ── Saved records section ── */
+        .saved-record {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .saved-record .record-icon {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #f59e0b;
+            flex-shrink: 0;
+        }
+
+        .saved-record .record-icon.synced { background: #10b981; }
+
+        .record-info .record-title { font-weight: 600; font-size: 0.9rem; }
+        .record-info .record-meta { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+        .record-actions { display: flex; gap: 6px; }
+
+        .record-btn {
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            color: var(--text-muted);
+            font-family: 'IBM Plex Sans', sans-serif;
+            transition: background 0.15s;
+        }
+
+        .record-btn:hover { background: #f1f5f9; }
+        .record-btn.danger { color: var(--red); border-color: #fecaca; }
+        .record-btn.danger:hover { background: #fee2e2; }
+
+        /* ── Sync badge ── */
+        .sync-badge {
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.65rem;
+            font-weight: 700;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: grid;
+            place-items: center;
+            position: absolute;
+            top: -6px;
+            right: -6px;
+        }
+
+        .sync-btn-wrap {
+            position: relative;
+            display: inline-block;
+        }
+
+        .sync-btn {
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
+            color: #fff;
+            border-radius: 8px;
+            padding: 7px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'IBM Plex Sans', sans-serif;
+            transition: background 0.2s;
+        }
+
+        .sync-btn:hover { background: rgba(255,255,255,0.25); }
+        .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+    <!-- ── Header ── -->
+    <header class="app-header">
+        <div class="header-inner">
+            <div class="header-brand">
+                <div class="icon-wrap"><i class="fas fa-book-open"></i></div>
+                <div>
+                    <h1>Diário de Obra</h1>
+                    <span>Registro de campo</span>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <div class="status-pill">
+                    <div class="status-dot" id="status-dot"></div>
+                    <span id="status-text">Offline</span>
+                </div>
+                <div class="sync-btn-wrap">
+                    <button class="sync-btn" id="sync-btn">
+                        <i class="fas fa-sync-alt" id="sync-icon"></i> Sincronizar
+                    </button>
+                    <div class="sync-badge" id="sync-badge" style="display:none">0</div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ── Main ── -->
+    <main class="main-content">
+
+        <!-- Dados Gerais -->
+        <div class="card">
+            <div class="card-header">
+                <div class="section-icon"><i class="fas fa-clipboard"></i></div>
+                <h2>Dados da Obra</h2>
+            </div>
+
+            <div class="field-group cols-2">
+                <div class="field">
+                    <label for="cliente">Cliente *</label>
+                    <input type="text" id="cliente" placeholder="Nome do cliente" required>
+                </div>
+                <div class="field">
+                    <label for="cidade">Cidade – UF *</label>
+                    <input type="text" id="cidade" placeholder="Ex: Cascavel – PR" required>
+                </div>
+            </div>
+
+            <div class="field-group" style="margin-top:1rem;">
+                <div class="field">
+                    <label for="granja">Nome da Granja / Núcleo *</label>
+                    <input type="text" id="granja" placeholder="Ex: Granja São João" required>
+                </div>
+            </div>
+
+            <div style="margin-top:1rem;">
+                <label style="display:block; font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px;">Tipo de Serviço *</label>
+                <div class="service-type-group" id="tipo-servico-group">
+                    <button type="button" class="service-type-btn" data-value="INSTALAÇÃO">
+                        <i class="fas fa-tools" style="margin-right:4px"></i> Instalação
+                    </button>
+                    <button type="button" class="service-type-btn" data-value="STARTUP">
+                        <i class="fas fa-play" style="margin-right:4px"></i> Startup
+                    </button>
+                    <button type="button" class="service-type-btn" data-value="MANUTENÇÃO">
+                        <i class="fas fa-wrench" style="margin-right:4px"></i> Manutenção
+                    </button>
+                </div>
+                <input type="hidden" id="tipo-servico" required>
+            </div>
+        </div>
+
+        <!-- Diário -->
+        <div class="card">
+            <div class="card-header">
+                <div class="section-icon"><i class="fas fa-calendar-alt"></i></div>
+                <h2>Diário de Atividades</h2>
+            </div>
+
+            <!-- Input row para nova entrada -->
+            <div class="diary-input-row">
+                <div>
+                    <div style="font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:5px;">Data</div>
+                    <input type="date" id="diary-date">
+                </div>
+                <div>
+                    <div style="font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:5px;">Relatório do dia</div>
+                    <textarea id="diary-text" placeholder="Descreva as atividades realizadas no dia..."></textarea>
+                </div>
+                <button class="btn-add" id="add-diary-btn">
+                    <i class="fas fa-plus"></i> Adicionar
+                </button>
+            </div>
+
+            <!-- Lista de entradas -->
+            <div class="diary-entries" id="diary-entries">
+                <div class="empty-diary" id="diary-empty">
+                    <i class="fas fa-book-open"></i>
+                    Nenhuma entrada registrada ainda.<br>Adicione o primeiro registro do dia acima.
+                </div>
+            </div>
+        </div>
+
+        <!-- Configurações de Sincronização -->
+        <div class="card" id="settings-card">
+            <div class="card-header">
+                <div class="section-icon"><i class="fas fa-cog"></i></div>
+                <h2>Configuração do Google Sheets</h2>
+            </div>
+            <div class="field">
+                <label for="sheets-url">URL do Google Apps Script *</label>
+                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbxFux90GWHY2le72tQGfsOKaDCJ0mVYOa3V_7RJ6us1Rce-pRzNtPP23C-yEe3ulhVKJg/exec" autocomplete="off">
+                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
+                    <i class="fas fa-info-circle"></i>
+    
+                </p>
+            </div>
+        </div>
+
+        <!-- Ações -->
+        <div class="footer-actions">
+            <button class="btn-secondary" id="clear-btn">
+                <i class="fas fa-eraser"></i> Limpar
+            </button>
+            <button class="btn-primary" id="save-btn">
+                <i class="fas fa-save"></i> Salvar
+            </button>
+        </div>
+
+        <!-- Registros salvos -->
+        <div class="card" id="saved-section" style="margin-top:1.5rem;">
+            <div class="card-header">
+                <div class="section-icon"><i class="fas fa-history"></i></div>
+                <h2>Registros Salvos <span id="pending-label" style="font-size:0.75rem; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-muted); text-transform:none; letter-spacing:0; margin-left:4px;"></span></h2>
+            </div>
+            <div id="saved-list" class="diary-entries">
+                <p style="font-size:0.85rem; color:var(--text-muted);">Nenhum registro salvo ainda.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i id="toast-icon"></i>
+        <span id="toast-text"></span>
+    </div>
+
+    <script>
+    // ═══════════════════════════════════════════════
+    // STATE
+    // ═══════════════════════════════════════════════
+    const state = {
+        tipoServico: '',
+        diario: [],         // [{data, texto}]
+        editId: null
+    };
+
+    const DB_NAME = 'DiarioObraDB';
+    const DB_VERSION = 1;
+    const STORE = 'registros';
+    const DRAFT_KEY = 'diarioDraft';
+    const SHEETS_URL_KEY = '11gFMGNfyuRv4YZItXrBkUuBD3SxnDHeLkMpgpzfn19M';
+
+    function getEndpoint() {
+        return localStorage.getItem(SHEETS_URL_KEY) || '';
+    }
+
+    let dbPromise = null;
+    let draftTimer = null;
+
+    // ═══════════════════════════════════════════════
+    // DB
+    // ═══════════════════════════════════════════════
+    function initDB() {
+        if (dbPromise) return dbPromise;
+        dbPromise = idb.openDB(DB_NAME, DB_VERSION, {
+            upgrade(db) {
+                if (!db.objectStoreNames.contains(STORE)) {
+                    const s = db.createObjectStore(STORE, { keyPath: 'id' });
+                    s.createIndex('sincronizado', 'sincronizado', { unique: false });
+                }
+            }
+        });
+        return dbPromise;
+    }
+
+    function genKey() {
+        return `diario_${Date.now().toString(36)}_${Math.random().toString(36).substr(2,6)}`;
+    }
+
+    // ═══════════════════════════════════════════════
+    // COLLECT / VALIDATE
+    // ═══════════════════════════════════════════════
+    function collect() {
+        return {
+            cliente: document.getElementById('cliente').value.trim(),
+            cidade: document.getElementById('cidade').value.trim(),
+            granja: document.getElementById('granja').value.trim(),
+            tipoServico: state.tipoServico,
+            diario: [...state.diario]
+        };
+    }
+
+    function validate() {
+        const f = collect();
+        if (!f.cliente) { toast('Preencha o campo Cliente', 'error'); return false; }
+        if (!f.cidade)  { toast('Preencha o campo Cidade – UF', 'error'); return false; }
+        if (!f.granja)  { toast('Preencha o campo Granja / Núcleo', 'error'); return false; }
+        if (!f.tipoServico) { toast('Selecione o Tipo de Serviço', 'error'); return false; }
+        if (f.diario.length === 0) { toast('Adicione ao menos uma entrada ao diário', 'error'); return false; }
+        return true;
+    }
+
+    // ═══════════════════════════════════════════════
+    // DIARY ENTRIES
+    // ═══════════════════════════════════════════════
+    function addDiaryEntry() {
+        const dateEl = document.getElementById('diary-date');
+        const textEl = document.getElementById('diary-text');
+        const date = dateEl.value;
+        const text = textEl.value.trim();
+
+        if (!date) { toast('Selecione a data da entrada', 'error'); return; }
+        if (!text) { toast('Escreva o relatório do dia', 'error'); return; }
+
+        state.diario.push({ data: date, texto: text });
+        // ordenar por data
+        state.diario.sort((a, b) => a.data.localeCompare(b.data));
+
+        dateEl.value = '';
+        textEl.value = '';
+
+        renderDiary();
+        scheduleDraft();
+        toast('Entrada adicionada', 'success');
+    }
+
+    function renderDiary() {
+        const container = document.getElementById('diary-entries');
+        const empty = document.getElementById('diary-empty');
+
+        // remove entries mas mantém o empty placeholder
+        Array.from(container.querySelectorAll('.diary-entry')).forEach(el => el.remove());
+
+        if (state.diario.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+
+        empty.style.display = 'none';
+
+        state.diario.forEach((entry, idx) => {
+            const el = document.createElement('div');
+            el.className = 'diary-entry';
+            el.innerHTML = `
+                <div class="entry-date">${formatDateBR(entry.data)}</div>
+                <div class="entry-text">${escHtml(entry.texto)}</div>
+                <div class="entry-actions">
+                    <button class="btn-danger-text" data-idx="${idx}" title="Remover entrada">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
+            el.querySelector('.btn-danger-text').addEventListener('click', function() {
+                state.diario.splice(parseInt(this.dataset.idx), 1);
+                renderDiary();
+                scheduleDraft();
+                toast('Entrada removida', 'info');
+            });
+            container.appendChild(el);
+        });
+    }
+
+    function formatDateBR(iso) {
+        if (!iso) return '–';
+        const [y, m, d] = iso.split('-');
+        return `${d}/${m}/${y}`;
+    }
+
+    function escHtml(str) {
+        return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    }
+
+    // ═══════════════════════════════════════════════
+    // TIPO SERVIÇO
+    // ═══════════════════════════════════════════════
+    document.querySelectorAll('.service-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.service-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.tipoServico = btn.dataset.value;
+            document.getElementById('tipo-servico').value = state.tipoServico;
+            scheduleDraft();
+        });
+    });
+
+    // ═══════════════════════════════════════════════
+    // SAVE LOCAL
+    // ═══════════════════════════════════════════════
+    async function saveLocal() {
+        if (!validate()) return;
+        const f = collect();
+        const db = await initDB();
+
+        const existingId = state.editId ? Number(state.editId) : null;
+        const existing = existingId ? await db.get(STORE, existingId).catch(() => null) : null;
+
+        const id = existing ? existing.id : Date.now();
+        const chave = existing?.chave || genKey();
+
+        const record = {
+            id,
+            chave,
+            createdAt: existing?.createdAt || new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            cliente: f.cliente,
+            cidade: f.cidade,
+            granja: f.granja,
+            tipoServico: f.tipoServico,
+            diario: f.diario,
+            sincronizado: false,
+            syncedAt: null,
+            serverId: existing?.serverId || null
+        };
+
+        await db.put(STORE, record);
+        state.editId = id;
+
+        await updatePendingCount();
+        await renderSaved();
+        toast(existing ? 'Registro atualizado!' : 'Registro salvo localmente!', 'success');
+
+        if (navigator.onLine) setTimeout(attemptSync, 800);
+    }
+
+    // ═══════════════════════════════════════════════
+    // RENDER SAVED
+    // ═══════════════════════════════════════════════
+    async function renderSaved() {
+        const list = document.getElementById('saved-list');
+        list.innerHTML = '';
+        const db = await initDB();
+        let records = await db.getAll(STORE);
+        records.sort((a, b) => b.id - a.id);
+
+        if (records.length === 0) {
+            list.innerHTML = '<p style="font-size:0.85rem; color:var(--text-muted);">Nenhum registro salvo ainda.</p>';
+            return;
+        }
+
+        records.forEach(rec => {
+            const el = document.createElement('div');
+            el.className = 'saved-record';
+            const date = new Date(rec.id).toLocaleDateString('pt-BR');
+            el.innerHTML = `
+                <div style="display:flex; align-items:center; gap:10px; flex:1; min-width:0;">
+                    <div class="record-icon ${rec.sincronizado ? 'synced' : ''}"></div>
+                    <div class="record-info">
+                        <div class="record-title">${rec.cliente || '–'}</div>
+                        <div class="record-meta">${rec.granja || '–'} · ${rec.tipoServico || '–'} · ${date} · ${rec.diario?.length || 0} entrada(s)</div>
+                    </div>
+                </div>
+                <div class="record-actions">
+                    <button class="record-btn edit-rec" data-id="${rec.id}"><i class="fas fa-edit"></i> Editar</button>
+                    <button class="record-btn danger del-rec" data-id="${rec.id}"><i class="fas fa-trash"></i></button>
+                </div>
+            `;
+            el.querySelector('.edit-rec').addEventListener('click', () => loadRecord(rec.id));
+            el.querySelector('.del-rec').addEventListener('click', () => deleteRecord(rec.id));
+            list.appendChild(el);
+        });
+    }
+
+    async function loadRecord(id) {
+        const db = await initDB();
+        const rec = await db.get(STORE, Number(id));
+        if (!rec) { toast('Registro não encontrado', 'error'); return; }
+
+        document.getElementById('cliente').value = rec.cliente || '';
+        document.getElementById('cidade').value = rec.cidade || '';
+        document.getElementById('granja').value = rec.granja || '';
+
+        state.tipoServico = rec.tipoServico || '';
+        document.querySelectorAll('.service-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === state.tipoServico);
+        });
+
+        state.diario = rec.diario ? JSON.parse(JSON.stringify(rec.diario)) : [];
+        state.editId = rec.id;
+        renderDiary();
+        saveDraft();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        toast('Registro carregado para edição', 'info');
+    }
+
+    async function deleteRecord(id) {
+        const db = await initDB();
+        await db.delete(STORE, Number(id));
+        if (state.editId === id) { state.editId = null; }
+        await updatePendingCount();
+        await renderSaved();
+        toast('Registro excluído', 'info');
+    }
+
+    // ═══════════════════════════════════════════════
+    // CLEAR FORM
+    // ═══════════════════════════════════════════════
+    function clearForm() {
+        document.getElementById('cliente').value = '';
+        document.getElementById('cidade').value = '';
+        document.getElementById('granja').value = '';
+        document.querySelectorAll('.service-type-btn').forEach(b => b.classList.remove('active'));
+        state.tipoServico = '';
+        state.diario = [];
+        state.editId = null;
+        document.getElementById('diary-date').value = '';
+        document.getElementById('diary-text').value = '';
+        renderDiary();
+        localStorage.removeItem(DRAFT_KEY);
+        toast('Formulário limpo', 'info');
+    }
+
+    // ═══════════════════════════════════════════════
+    // DRAFT
+    // ═══════════════════════════════════════════════
+    function scheduleDraft() {
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(saveDraft, 400);
+    }
+
+    function saveDraft() {
+        const draft = {
+            formData: collect(),
+            editId: state.editId
+        };
+        try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
+    }
+
+    function loadDraft() {
+        const raw = localStorage.getItem(DRAFT_KEY);
+        if (!raw) return;
+        try {
+            const d = JSON.parse(raw);
+            if (d.formData) {
+                document.getElementById('cliente').value = d.formData.cliente || '';
+                document.getElementById('cidade').value = d.formData.cidade || '';
+                document.getElementById('granja').value = d.formData.granja || '';
+                state.tipoServico = d.formData.tipoServico || '';
+                document.querySelectorAll('.service-type-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.value === state.tipoServico);
+                });
+                state.diario = d.formData.diario || [];
+                renderDiary();
+            }
+            state.editId = d.editId || null;
+        } catch(e) {}
+    }
+
+    // ═══════════════════════════════════════════════
+    // SYNC
+    // ═══════════════════════════════════════════════
+    let isSyncing = false;
+    let syncInterval = null;
+
+    async function attemptSync() {
+        if (isSyncing || !navigator.onLine) return;
+
+        const endpoint = getEndpoint();
+        if (!endpoint) {
+            toast('Configure a URL do Google Sheets nas configurações', 'error');
+            return;
+        }
+
+        isSyncing = true;
+        const syncIcon = document.getElementById('sync-icon');
+        const syncBtn = document.getElementById('sync-btn');
+        syncIcon.classList.add('fa-spin');
+        syncBtn.disabled = true;
+
+        try {
+            const db = await initDB();
+            const all = await db.getAll(STORE);
+            const pending = all.filter(r => !r.sincronizado);
+
+            let successCount = 0;
+            let errorCount = 0;
+
+            for (const rec of pending) {
+                // Expande diário: uma linha por entrada
+                const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '' }];
+                const rows = entries.map(entry => ({
+                    syncedAt:    new Date().toISOString(),
+                    id:          rec.id,
+                    chave:       rec.chave,
+                    cliente:     rec.cliente,
+                    cidade:      rec.cidade,
+                    granja:      rec.granja,
+                    tipoServico: rec.tipoServico,
+                    data:        entry.data,
+                    texto:       entry.texto
+                }));
+
+                try {
+                    const resp = await fetch(endpoint, {
+                        method: 'POST',
+                        mode: 'no-cors', // Google Apps Script exige isso
+                        headers: { 'Content-Type': 'text/plain' },
+                        body: JSON.stringify({ rows, chave: rec.chave })
+                    });
+
+                    // com mode:'no-cors' o status é sempre opaque (0), mas o envio ocorreu
+                    rec.sincronizado = true;
+                    rec.syncedAt = new Date().toISOString();
+                    await db.put(STORE, rec);
+                    successCount++;
+                } catch(e) {
+                    errorCount++;
+                }
+            }
+
+            await updatePendingCount();
+            await renderSaved();
+
+            if (pending.length === 0) {
+                toast('Tudo já está sincronizado', 'info');
+            } else if (errorCount === 0) {
+                toast(`${successCount} registro(s) enviado(s) ao Google Sheets`, 'success');
+            } else {
+                toast(`${successCount} enviado(s), ${errorCount} com erro`, 'error');
+            }
+        } finally {
+            isSyncing = false;
+            syncIcon.classList.remove('fa-spin');
+            syncBtn.disabled = false;
+        }
+    }
+
+    async function updatePendingCount() {
+        const db = await initDB();
+        const all = await db.getAll(STORE);
+        const count = all.filter(r => !r.sincronizado).length;
+
+        const badge = document.getElementById('sync-badge');
+        const label = document.getElementById('pending-label');
+        if (count > 0) {
+            badge.textContent = count;
+            badge.style.display = 'grid';
+            label.textContent = `· ${count} pendente(s)`;
+        } else {
+            badge.style.display = 'none';
+            label.textContent = '';
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    // STATUS
+    // ═══════════════════════════════════════════════
+    function updateStatus() {
+        const dot = document.getElementById('status-dot');
+        const txt = document.getElementById('status-text');
+        if (navigator.onLine) {
+            dot.classList.add('online');
+            txt.textContent = 'Online';
+        } else {
+            dot.classList.remove('online');
+            txt.textContent = 'Offline';
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    // TOAST
+    // ═══════════════════════════════════════════════
+    let toastTimer = null;
+    function toast(msg, type='info') {
+        const el = document.getElementById('toast');
+        const icon = document.getElementById('toast-icon');
+        const text = document.getElementById('toast-text');
+        el.className = `toast ${type}`;
+        icon.className = type === 'success' ? 'fas fa-check-circle' :
+                         type === 'error'   ? 'fas fa-exclamation-circle' : 'fas fa-info-circle';
+        text.textContent = msg;
+        el.style.display = 'flex';
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+    }
+
+    // ═══════════════════════════════════════════════
+    // INIT
+    // ═══════════════════════════════════════════════
+    document.addEventListener('DOMContentLoaded', async () => {
+        await initDB();
+        updateStatus();
+        loadDraft();
+        await updatePendingCount();
+        await renderSaved();
+
+        // Carregar URL salva do Google Sheets
+        const savedUrl = localStorage.getItem(SHEETS_URL_KEY) || '';
+        document.getElementById('sheets-url').value = savedUrl;
+
+        // Salvar URL quando alterada
+        document.getElementById('sheets-url').addEventListener('input', function() {
+            localStorage.setItem(SHEETS_URL_KEY, this.value.trim());
+        });
+
+        // events
+        document.getElementById('add-diary-btn').addEventListener('click', addDiaryEntry);
+        document.getElementById('save-btn').addEventListener('click', saveLocal);
+        document.getElementById('clear-btn').addEventListener('click', clearForm);
+        document.getElementById('sync-btn').addEventListener('click', () => {
+            if (!navigator.onLine) { toast('Sem conexão', 'error'); return; }
+            attemptSync();
+        });
+
+        // Textarea: Ctrl+Enter para adicionar
+        document.getElementById('diary-text').addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry();
+        });
+
+        // draft on change
+        ['cliente','cidade','granja'].forEach(id => {
+            document.getElementById(id).addEventListener('input', scheduleDraft);
+        });
+
+        // default diary date = today
+        document.getElementById('diary-date').value = new Date().toISOString().slice(0, 10);
+
+        window.addEventListener('online', () => { updateStatus(); attemptSync(); });
+        window.addEventListener('offline', updateStatus);
+
+        // polling
+        syncInterval = setInterval(() => { if (navigator.onLine) attemptSync(); }, 30000);
+    });
+    </script>
+</body>
+</html>
