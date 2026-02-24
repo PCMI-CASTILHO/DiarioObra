@@ -665,8 +665,8 @@
                     <textarea id="diary-text" placeholder="Descreva as atividades realizadas no dia..."></textarea>
                 </div>
                 <div style="display: flex; gap: 6px; align-self: flex-end;">
-                    <button class="btn-add" id="add-obs-btn" style="background: #10b981;">
-                        <i class="fas fa-plus"></i> Observação
+                    <button class="btn-add" id="add-normal-btn" style="background: #10b981;">
+                        <i class="fas fa-plus"></i> Normal
                     </button>
                     <button class="btn-add" id="add-occ-btn" style="background: #ef4444;">
                         <i class="fas fa-exclamation-triangle"></i> Ocorrência
@@ -854,9 +854,9 @@
         empty.style.display = 'none';
 
         state.diario.forEach((entry, idx) => {
-            const tipo = entry.tipo || 'Observação'; // padrão para registros antigos
-            const bgColor = tipo === 'Observação' ? '#d1fae5' : '#fee2e2'; // verde ou vermelho claro
-            const borderColor = tipo === 'Observação' ? '#10b981' : '#ef4444';
+            const tipo = entry.tipo || 'Normal'; // padrão para registros antigos
+            const bgColor = tipo === 'Normal' ? '#d1fae5' : '#fee2e2'; // verde ou vermelho claro
+            const borderColor = tipo === 'Normal' ? '#10b981' : '#ef4444';
 
             const el = document.createElement('div');
             el.className = 'diary-entry';
@@ -1020,7 +1020,7 @@
             state.diario = rec.diario.map(entry => ({
                 data: normalizeDate(entry.data),
                 texto: entry.texto,
-                tipo: entry.tipo || 'Observação'   // ← padrão para registros antigos
+                tipo: entry.tipo || 'Normal'   // padrão para registros antigos
             }));
         } else {
             state.diario = [];
@@ -1106,7 +1106,7 @@
                     state.diario = d.formData.diario.map(entry => ({
                         data: normalizeDate(entry.data),
                         texto: entry.texto,
-                        tipo: entry.tipo || 'Observação'
+                        tipo: entry.tipo || 'Normal'
                     }));
                 } else {
                     state.diario = [];
@@ -1143,7 +1143,7 @@
             let errorCount = 0;
 
             for (const rec of pending) {
-                const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '', tipo: 'Observação' }];
+                const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '', tipo: 'Normal' }];
                 const rows = entries.map(entry => ({
                     syncedAt:    new Date().toISOString(),
                     id:          rec.id,
@@ -1155,7 +1155,7 @@
                     situacao:    rec.situacao,
                     data:        entry.data,
                     texto:       entry.texto,
-                    episodio:    entry.tipo || 'Observação'   // ← NOVO CAMPO
+                    episodio:    entry.tipo || 'Normal'   // NOVO CAMPO
                 }));
 
                 try {
@@ -1269,7 +1269,7 @@
                 const diarioNormalizado = (rec.diario || []).map(entry => ({
                     data: normalizeDate(entry.data),
                     texto: entry.texto,
-                    tipo: entry.episodio || 'Observação'   // ← mapeia episodio para tipo
+                    tipo: entry.episodio || 'Normal'   // mapeia episodio para tipo
                 }));
 
                 const novoRegistro = {
@@ -1348,7 +1348,7 @@
         await renderSaved();
 
         // Botões de adicionar
-        document.getElementById('add-obs-btn').addEventListener('click', () => addDiaryEntry('Observação'));
+        document.getElementById('add-normal-btn').addEventListener('click', () => addDiaryEntry('Normal'));
         document.getElementById('add-occ-btn').addEventListener('click', () => addDiaryEntry('Ocorrência'));
 
         document.getElementById('save-btn').addEventListener('click', saveLocal);
@@ -1361,7 +1361,7 @@
         document.getElementById('import-btn').addEventListener('click', importFromSheet);
 
         document.getElementById('diary-text').addEventListener('keydown', e => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry('Observação'); // atalho para observação
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry('Normal'); // atalho para normal
         });
 
         ['cliente','cidade','granja'].forEach(id => {
