@@ -702,7 +702,7 @@
             </div>
             <div class="field">
                 <label for="sheets-url">URL do Google Apps Script *</label>
-                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbw6My2iMA8PhZjm7lnScVus6yuTbuDODPmq8yvmtMwpJ2YuD-Bt3hggGimJf_iWkR-YHw/exec" autocomplete="off">
+                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbzNebBzePHFfsEiyYdrZBL8VbbsmwZHv5DcYQk1iipDNr3cWt0GDJa8nOmCHs3Gcm2Wbw/exec" autocomplete="off">
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
                     <i class="fas fa-info-circle"></i> Insira a URL do seu script (implantação do Google Apps Script).
                 </p>
@@ -744,6 +744,20 @@
     </div>
 
     <script>
+    // ═══════════════════════════════════════════════
+    // Função auxiliar para normalizar data (YYYY-MM-DD)
+    // ═══════════════════════════════════════════════
+    function normalizeDate(dateStr) {
+        if (!dateStr) return '';
+        // Se já estiver no formato YYYY-MM-DD, retorna
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+        // Tenta extrair a parte da data de uma string ISO
+        const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+        if (match) return match[1];
+        // Se não conseguir, retorna vazio ou a própria string
+        return dateStr;
+    }
+
     // ═══════════════════════════════════════════════
     // STATE
     // ═══════════════════════════════════════════════
@@ -818,7 +832,7 @@
     function addDiaryEntry() {
         const dateEl = document.getElementById('diary-date');
         const textEl = document.getElementById('diary-text');
-        const date = dateEl.value;
+        const date = dateEl.value; // já YYYY-MM-DD
         const text = textEl.value.trim();
 
         if (!date) { toast('Selecione a data da entrada', 'error'); return; }
@@ -872,7 +886,9 @@
 
     function formatDateBR(iso) {
         if (!iso) return '–';
-        const [y, m, d] = iso.split('-');
+        // Normaliza para YYYY-MM-DD antes de exibir
+        const data = normalizeDate(iso);
+        const [y, m, d] = data.split('-');
         return `${d}/${m}/${y}`;
     }
 
@@ -930,7 +946,7 @@
             granja: f.granja,
             tipoServico: f.tipoServico,
             situacao: f.situacao,
-            diario: f.diario,
+            diario: f.diario, // já com datas normalizadas
             sincronizado: false,
             syncedAt: null,
             serverId: existing?.serverId || null
@@ -1004,7 +1020,15 @@
         });
         document.getElementById('situacao').value = state.situacao;
 
-        state.diario = rec.diario ? JSON.parse(JSON.stringify(rec.diario)) : [];
+        // Normaliza as datas do diário ao carregar
+        if (rec.diario && Array.isArray(rec.diario)) {
+            state.diario = rec.diario.map(entry => ({
+                data: normalizeDate(entry.data),
+                texto: entry.texto
+            }));
+        } else {
+            state.diario = [];
+        }
         state.editId = rec.id;
         renderDiary();
         saveDraft();
@@ -1082,7 +1106,15 @@
                 });
                 document.getElementById('situacao').value = state.situacao;
 
-                state.diario = d.formData.diario || [];
+                // Normaliza datas do rascunho (embora já devam estar corretas)
+                if (d.formData.diario && Array.isArray(d.formData.diario)) {
+                    state.diario = d.formData.diario.map(entry => ({
+                        data: normalizeDate(entry.data),
+                        texto: entry.texto
+                    }));
+                } else {
+                    state.diario = [];
+                }
                 renderDiary();
             }
             state.editId = d.editId || null;
@@ -1129,7 +1161,7 @@
                     granja:      rec.granja,
                     tipoServico: rec.tipoServico,
                     situacao:    rec.situacao,
-                    data:        entry.data,
+                    data:        entry.data, // já YYYY-MM-DD
                     texto:       entry.texto
                 }));
 
@@ -1211,7 +1243,6 @@
         importBtn.disabled = true;
 
         try {
-            // Faz a requisição GET para obter todos os registros (use ?action=getAll se quiser, mas o backend atual já responde com registros)
             const response = await fetch(endpoint, {
                 method: 'GET',
                 mode: 'cors'
@@ -1245,6 +1276,12 @@
                     continue;
                 }
 
+                // Normaliza as datas das entradas do diário
+                const diarioNormalizado = (rec.diario || []).map(entry => ({
+                    data: normalizeDate(entry.data),
+                    texto: entry.texto
+                }));
+
                 const novoRegistro = {
                     id: Number(rec.id),
                     chave: rec.chave,
@@ -1255,7 +1292,7 @@
                     granja: rec.granja,
                     tipoServico: rec.tipoServico,
                     situacao: rec.situacao || 'Em andamento',
-                    diario: rec.diario || [],
+                    diario: diarioNormalizado,
                     sincronizado: true,
                     syncedAt: new Date().toISOString(),
                     serverId: null
@@ -1335,7 +1372,6 @@
             attemptSync();
         });
 
-        // Botão Importar
         document.getElementById('import-btn').addEventListener('click', importFromSheet);
 
         document.getElementById('diary-text').addEventListener('keydown', e => {
