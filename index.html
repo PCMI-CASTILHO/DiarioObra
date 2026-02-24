@@ -787,7 +787,7 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxLsp1x-ctGc_fK994QKTSCo3ywmkflUyQcPKb_V_C5UdPMe13RDaMvheCwRVku0b0deQ/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby26SdWz10tYRW66fbiHpjoFBznc291rCkzUVKPBK10E1tKA-tU5HCTCHii5GyuwI6VWw/exec';
     const FOTOS_LIMIT = 15;
 
     // ═══════════════════════════════════════════════
@@ -1249,23 +1249,23 @@
 
     async function attemptSync() {
         if (isSyncing || !navigator.onLine) return;
-
+    
         const endpoint = getEndpoint();
-
+    
         isSyncing = true;
         const syncIcon = document.getElementById('sync-icon');
         const syncBtn = document.getElementById('sync-btn');
         syncIcon.classList.add('fa-spin');
         syncBtn.disabled = true;
-
+    
         try {
             const db = await initDB();
             const all = await db.getAll(STORE);
             const pending = all.filter(r => !r.sincronizado);
-
+    
             let successCount = 0;
             let errorCount = 0;
-
+    
             for (const rec of pending) {
                 const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '', tipo: 'Normal' }];
                 const rows = entries.map(entry => ({
@@ -1281,45 +1281,52 @@
                     texto:       entry.texto,
                     episodio:    entry.tipo || 'Normal'
                 }));
-
-                // Inclui as fotos no payload (o Apps Script precisa ser adaptado para receber e processar)
+    
                 const payload = {
                     rows: rows,
                     chave: rec.chave,
-                    fotos: rec.fotos || [] // array de { nome, base64, tipo }
+                    fotos: rec.fotos || []
                 };
-
+    
                 try {
-                    // Nota: o Google Apps Script atual espera apenas {rows, chave}. Para funcionar com fotos,
-                    // é necessário modificar o doPost para aceitar e processar o campo "fotos".
-                    await fetch(endpoint, {
+                    const response = await fetch(endpoint, {
                         method: 'POST',
-                        mode: 'no-cors', // importante para evitar CORS, mas não recebemos resposta
-                        headers: { 'Content-Type': 'text/plain' },
+                        mode: 'cors', // <- mudança crucial
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
-
-                    // Marca como sincronizado mesmo sem confirmação (no-cors não permite ler resposta)
+    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+    
+                    const result = await response.json();
+                    if (result.status !== 'ok') {
+                        throw new Error(result.message || 'Erro desconhecido');
+                    }
+    
+                    // Sucesso
                     rec.sincronizado = true;
                     rec.syncedAt = new Date().toISOString();
-                    // Após sincronizar, podemos remover as fotos do banco local para economizar espaço?
-                    // Mas talvez queira manter para visualização offline. Vamos manter.
                     await db.put(STORE, rec);
                     successCount++;
-                } catch(e) {
+                } catch (e) {
+                    console.error('Erro ao sincronizar registro', rec.id, e);
                     errorCount++;
+                    // Opcional: mostrar toast com o erro
+                    toast('Erro: ' + e.message, 'error');
                 }
             }
-
+    
             await updatePendingCount();
             await renderSaved();
-
+    
             if (pending.length === 0) {
                 toast('Tudo já está sincronizado', 'info');
             } else if (errorCount === 0) {
                 toast(`${successCount} registro(s) enviado(s) ao Google Sheets (incluindo fotos)`, 'success');
             } else {
-                toast(`${successCount} enviado(s), ${errorCount} com erro`, 'error');
+                toast(`${successCount} enviado(s), ${errorCount} com erro. Verifique o console.`, 'error');
             }
         } finally {
             isSyncing = false;
