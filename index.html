@@ -573,41 +573,6 @@
 
         .sync-btn:hover { background: rgba(255,255,255,0.25); }
         .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-        /* ── Fotos preview ── */
-        .foto-preview-item {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            border-radius: 8px;
-            overflow: hidden;
-            border: 2px solid var(--border);
-            background: #f1f5f9;
-        }
-        .foto-preview-item img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        .foto-preview-item button {
-            position: absolute;
-            top: 2px;
-            right: 2px;
-            background: rgba(0,0,0,0.6);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 22px;
-            height: 22px;
-            font-size: 12px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .foto-preview-item button:hover {
-            background: rgba(255,0,0,0.8);
-        }
     </style>
 </head>
 <body>
@@ -732,21 +697,6 @@
                 </div>
                 <input type="hidden" id="situacao" value="Em andamento">
             </div>
-
-            <!-- Fotos (opcional, até 15) -->
-            <div style="margin-top: 1.5rem;">
-                <label style="display:block; font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px;">
-                    Fotos (opcional, até 15)
-                </label>
-                <input type="file" id="fotos-input" multiple accept="image/*" style="display: none;">
-                <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
-                    <button class="btn-secondary" id="select-fotos-btn" style="padding: 8px 12px;">
-                        <i class="fas fa-camera"></i> Selecionar fotos
-                    </button>
-                    <span id="fotos-count">0</span> / 15
-                </div>
-                <div id="fotos-preview" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
-            </div>
         </div>
 
         <!-- Ações -->
@@ -787,8 +737,7 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzrXhTj8HfE6bYKNWnk4QZLr_6YGSVmWNN9Gh4OziplmoZ1FEQKAY3MYFWdeywZEHyGtA/exec';
-    const FOTOS_LIMIT = 15;
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynzJoG5SOyaNp6MpIV8Q4uwn0rqGjkivUNxnMHaH5yKfeVz5KOa3wZPFRAYFCsZstU2g/exec';
 
     // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
@@ -808,12 +757,11 @@
         tipoServico: '',
         situacao: 'Em andamento',
         diario: [],
-        fotos: [], // array de { nome, base64 }
         editId: null
     };
 
     const DB_NAME = 'DiarioObraDB';
-    const DB_VERSION = 2; // incrementado para nova store com fotos
+    const DB_VERSION = 1;
     const STORE = 'registros';
     const DRAFT_KEY = 'diarioDraft';
 
@@ -830,12 +778,10 @@
     function initDB() {
         if (dbPromise) return dbPromise;
         dbPromise = idb.openDB(DB_NAME, DB_VERSION, {
-            upgrade(db, oldVersion) {
+            upgrade(db) {
                 if (!db.objectStoreNames.contains(STORE)) {
                     const s = db.createObjectStore(STORE, { keyPath: 'id' });
                     s.createIndex('sincronizado', 'sincronizado', { unique: false });
-                } else {
-                    // Se a store já existe, pode ser necessário adicionar campos? O idb faz merge automático.
                 }
             }
         });
@@ -856,8 +802,7 @@
             granja: document.getElementById('granja').value.trim(),
             tipoServico: state.tipoServico,
             situacao: state.situacao,
-            diario: [...state.diario],
-            fotos: [...state.fotos] // salva as fotos
+            diario: [...state.diario]
         };
     }
 
@@ -909,8 +854,8 @@
         empty.style.display = 'none';
 
         state.diario.forEach((entry, idx) => {
-            const tipo = entry.tipo || 'Normal';
-            const bgColor = tipo === 'Normal' ? '#d1fae5' : '#fee2e2';
+            const tipo = entry.tipo || 'Normal'; // padrão para registros antigos
+            const bgColor = tipo === 'Normal' ? '#d1fae5' : '#fee2e2'; // verde ou vermelho claro
             const borderColor = tipo === 'Normal' ? '#10b981' : '#ef4444';
 
             const el = document.createElement('div');
@@ -945,61 +890,6 @@
 
     function escHtml(str) {
         return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
-    }
-
-    // ═══════════════════════════════════════════════
-    // FOTOS
-    // ═══════════════════════════════════════════════
-    function handleFotosSelected(files) {
-        if (!files || files.length === 0) return;
-        const total = state.fotos.length + files.length;
-        if (total > FOTOS_LIMIT) {
-            toast(`Você pode adicionar no máximo ${FOTOS_LIMIT} fotos. Já existem ${state.fotos.length}.`, 'error');
-            return;
-        }
-
-        // Para cada arquivo, converter para base64 e adicionar ao state
-        Array.from(files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const base64 = e.target.result.split(',')[1]; // remove o prefixo data:image/...;base64,
-                state.fotos.push({
-                    nome: file.name,
-                    base64: base64,
-                    tipo: file.type
-                });
-                updateFotosPreview();
-                scheduleDraft();
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    function updateFotosPreview() {
-        const container = document.getElementById('fotos-preview');
-        container.innerHTML = '';
-        document.getElementById('fotos-count').textContent = state.fotos.length;
-
-        state.fotos.forEach((foto, index) => {
-            const div = document.createElement('div');
-            div.className = 'foto-preview-item';
-            div.innerHTML = `
-                <img src="data:${foto.tipo || 'image/jpeg'};base64,${foto.base64}" alt="preview">
-                <button class="remover-foto" data-index="${index}"><i class="fas fa-times"></i></button>
-            `;
-            div.querySelector('.remover-foto').addEventListener('click', () => {
-                state.fotos.splice(index, 1);
-                updateFotosPreview();
-                scheduleDraft();
-            });
-            container.appendChild(div);
-        });
-    }
-
-    function clearFotos() {
-        state.fotos = [];
-        updateFotosPreview();
-        document.getElementById('fotos-input').value = '';
     }
 
     // ═══════════════════════════════════════════════
@@ -1053,7 +943,6 @@
             tipoServico: f.tipoServico,
             situacao: f.situacao,
             diario: f.diario,
-            fotos: f.fotos, // salva as fotos no banco
             sincronizado: false,
             syncedAt: null,
             serverId: existing?.serverId || null
@@ -1093,7 +982,7 @@
                     <div class="record-icon ${rec.sincronizado ? 'synced' : ''}"></div>
                     <div class="record-info">
                         <div class="record-title">${rec.cliente || '–'}</div>
-                        <div class="record-meta">${rec.granja || '–'} · ${rec.tipoServico || '–'} · ${rec.situacao || '–'} · ${date} · ${rec.diario?.length || 0} entrada(s) · ${rec.fotos?.length || 0} foto(s)</div>
+                        <div class="record-meta">${rec.granja || '–'} · ${rec.tipoServico || '–'} · ${rec.situacao || '–'} · ${date} · ${rec.diario?.length || 0} entrada(s)</div>
                     </div>
                 </div>
                 <div class="record-actions">
@@ -1131,16 +1020,11 @@
             state.diario = rec.diario.map(entry => ({
                 data: normalizeDate(entry.data),
                 texto: entry.texto,
-                tipo: entry.tipo || 'Normal'
+                tipo: entry.tipo || 'Normal'   // padrão para registros antigos
             }));
         } else {
             state.diario = [];
         }
-
-        // Carrega fotos
-        state.fotos = rec.fotos && Array.isArray(rec.fotos) ? rec.fotos : [];
-        updateFotosPreview();
-
         state.editId = rec.id;
         renderDiary();
         saveDraft();
@@ -1173,7 +1057,6 @@
         document.getElementById('situacao').value = 'Em andamento';
 
         state.diario = [];
-        clearFotos();
         state.editId = null;
         document.getElementById('diary-date').value = '';
         document.getElementById('diary-text').value = '';
@@ -1228,13 +1111,6 @@
                 } else {
                     state.diario = [];
                 }
-
-                if (d.formData.fotos && Array.isArray(d.formData.fotos)) {
-                    state.fotos = d.formData.fotos;
-                } else {
-                    state.fotos = [];
-                }
-                updateFotosPreview();
                 renderDiary();
             }
             state.editId = d.editId || null;
@@ -1249,36 +1125,23 @@
 
     async function attemptSync() {
         if (isSyncing || !navigator.onLine) return;
-    
+
         const endpoint = getEndpoint();
-    
-        // Verifica tamanho total das fotos pendentes
-        const db = await initDB();
-        const all = await db.getAll(STORE);
-        const pending = all.filter(r => !r.sincronizado);
-        let totalFotosSize = 0;
-        pending.forEach(rec => {
-            if (rec.fotos) {
-                rec.fotos.forEach(foto => {
-                    totalFotosSize += foto.base64.length * 0.75; // aproximado em bytes
-                });
-            }
-        });
-        if (totalFotosSize > 10 * 1024 * 1024) {
-            toast('Tamanho total das fotos excede 10MB. Reduza ou comprima as imagens.', 'error');
-            return;
-        }
-    
+
         isSyncing = true;
         const syncIcon = document.getElementById('sync-icon');
         const syncBtn = document.getElementById('sync-btn');
         syncIcon.classList.add('fa-spin');
         syncBtn.disabled = true;
-    
+
         try {
+            const db = await initDB();
+            const all = await db.getAll(STORE);
+            const pending = all.filter(r => !r.sincronizado);
+
             let successCount = 0;
             let errorCount = 0;
-    
+
             for (const rec of pending) {
                 const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '', tipo: 'Normal' }];
                 const rows = entries.map(entry => ({
@@ -1292,43 +1155,35 @@
                     situacao:    rec.situacao,
                     data:        entry.data,
                     texto:       entry.texto,
-                    episodio:    entry.tipo || 'Normal'
+                    episodio:    entry.tipo || 'Normal'   // NOVO CAMPO
                 }));
-    
-                const payload = {
-                    rows: rows,
-                    chave: rec.chave,
-                    fotos: rec.fotos || []
-                };
-    
+
                 try {
                     await fetch(endpoint, {
                         method: 'POST',
-                        mode: 'no-cors', // essencial para evitar CORS
+                        mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
-                        body: JSON.stringify(payload)
+                        body: JSON.stringify({ rows, chave: rec.chave })
                     });
-    
-                    // Mesmo sem confirmação, assumimos que deu certo
+
                     rec.sincronizado = true;
                     rec.syncedAt = new Date().toISOString();
                     await db.put(STORE, rec);
                     successCount++;
-                } catch (e) {
-                    console.error('Erro de rede ao sincronizar', rec.id, e);
+                } catch(e) {
                     errorCount++;
                 }
             }
-    
+
             await updatePendingCount();
             await renderSaved();
-    
+
             if (pending.length === 0) {
                 toast('Tudo já está sincronizado', 'info');
             } else if (errorCount === 0) {
-                toast(`${successCount} registro(s) enviado(s). Verifique a planilha em instantes.`, 'success');
+                toast(`${successCount} registro(s) enviado(s) ao Google Sheets`, 'success');
             } else {
-                toast(`${successCount} enviado(s), ${errorCount} com erro.`, 'error');
+                toast(`${successCount} enviado(s), ${errorCount} com erro`, 'error');
             }
         } finally {
             isSyncing = false;
@@ -1414,12 +1269,9 @@
                 const diarioNormalizado = (rec.diario || []).map(entry => ({
                     data: normalizeDate(entry.data),
                     texto: entry.texto,
-                    tipo: entry.episodio || 'Normal'
+                    tipo: entry.episodio || 'Normal'   // mapeia episodio para tipo
                 }));
 
-                // Nota: a planilha original não tem fotos, então esse campo virá vazio.
-                // Quando o back-end for adaptado para retornar links, precisaremos baixar as imagens? 
-                // Por enquanto, não importamos fotos da planilha.
                 const novoRegistro = {
                     id: Number(rec.id),
                     chave: rec.chave,
@@ -1431,7 +1283,6 @@
                     tipoServico: rec.tipoServico,
                     situacao: rec.situacao || 'Em andamento',
                     diario: diarioNormalizado,
-                    fotos: [], // sem fotos por enquanto
                     sincronizado: true,
                     syncedAt: new Date().toISOString(),
                     serverId: null
@@ -1496,17 +1347,9 @@
         await updatePendingCount();
         await renderSaved();
 
-        // Botões de adicionar entrada
+        // Botões de adicionar
         document.getElementById('add-normal-btn').addEventListener('click', () => addDiaryEntry('Normal'));
         document.getElementById('add-occ-btn').addEventListener('click', () => addDiaryEntry('Ocorrência'));
-
-        // Botões de fotos
-        const fotosInput = document.getElementById('fotos-input');
-        document.getElementById('select-fotos-btn').addEventListener('click', () => fotosInput.click());
-        fotosInput.addEventListener('change', (e) => {
-            handleFotosSelected(e.target.files);
-            fotosInput.value = ''; // permite selecionar o mesmo arquivo novamente
-        });
 
         document.getElementById('save-btn').addEventListener('click', saveLocal);
         document.getElementById('clear-btn').addEventListener('click', clearForm);
@@ -1518,7 +1361,7 @@
         document.getElementById('import-btn').addEventListener('click', importFromSheet);
 
         document.getElementById('diary-text').addEventListener('keydown', e => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry('Normal');
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry('Normal'); // atalho para normal
         });
 
         ['cliente','cidade','granja'].forEach(id => {
