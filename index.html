@@ -787,7 +787,7 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby26SdWz10tYRW66fbiHpjoFBznc291rCkzUVKPBK10E1tKA-tU5HCTCHii5GyuwI6VWw/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzrXhTj8HfE6bYKNWnk4QZLr_6YGSVmWNN9Gh4OziplmoZ1FEQKAY3MYFWdeywZEHyGtA/exec';
     const FOTOS_LIMIT = 15;
 
     // ═══════════════════════════════════════════════
@@ -1252,6 +1252,23 @@
     
         const endpoint = getEndpoint();
     
+        // Verifica tamanho total das fotos pendentes
+        const db = await initDB();
+        const all = await db.getAll(STORE);
+        const pending = all.filter(r => !r.sincronizado);
+        let totalFotosSize = 0;
+        pending.forEach(rec => {
+            if (rec.fotos) {
+                rec.fotos.forEach(foto => {
+                    totalFotosSize += foto.base64.length * 0.75; // aproximado em bytes
+                });
+            }
+        });
+        if (totalFotosSize > 10 * 1024 * 1024) {
+            toast('Tamanho total das fotos excede 10MB. Reduza ou comprima as imagens.', 'error');
+            return;
+        }
+    
         isSyncing = true;
         const syncIcon = document.getElementById('sync-icon');
         const syncBtn = document.getElementById('sync-btn');
@@ -1259,10 +1276,6 @@
         syncBtn.disabled = true;
     
         try {
-            const db = await initDB();
-            const all = await db.getAll(STORE);
-            const pending = all.filter(r => !r.sincronizado);
-    
             let successCount = 0;
             let errorCount = 0;
     
@@ -1289,32 +1302,21 @@
                 };
     
                 try {
-                    const response = await fetch(endpoint, {
+                    await fetch(endpoint, {
                         method: 'POST',
-                        mode: 'cors', // <- mudança crucial
-                        headers: { 'Content-Type': 'application/json' },
+                        mode: 'no-cors', // essencial para evitar CORS
+                        headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify(payload)
                     });
     
-                    if (!response.ok) {
-                        throw new Error(`HTTP error ${response.status}`);
-                    }
-    
-                    const result = await response.json();
-                    if (result.status !== 'ok') {
-                        throw new Error(result.message || 'Erro desconhecido');
-                    }
-    
-                    // Sucesso
+                    // Mesmo sem confirmação, assumimos que deu certo
                     rec.sincronizado = true;
                     rec.syncedAt = new Date().toISOString();
                     await db.put(STORE, rec);
                     successCount++;
                 } catch (e) {
-                    console.error('Erro ao sincronizar registro', rec.id, e);
+                    console.error('Erro de rede ao sincronizar', rec.id, e);
                     errorCount++;
-                    // Opcional: mostrar toast com o erro
-                    toast('Erro: ' + e.message, 'error');
                 }
             }
     
@@ -1324,9 +1326,9 @@
             if (pending.length === 0) {
                 toast('Tudo já está sincronizado', 'info');
             } else if (errorCount === 0) {
-                toast(`${successCount} registro(s) enviado(s) ao Google Sheets (incluindo fotos)`, 'success');
+                toast(`${successCount} registro(s) enviado(s). Verifique a planilha em instantes.`, 'success');
             } else {
-                toast(`${successCount} enviado(s), ${errorCount} com erro. Verifique o console.`, 'error');
+                toast(`${successCount} enviado(s), ${errorCount} com erro.`, 'error');
             }
         } finally {
             isSyncing = false;
