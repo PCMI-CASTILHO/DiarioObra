@@ -694,21 +694,6 @@
             </div>
         </div>
 
-        <!-- Configurações de Sincronização -->
-        <div class="card" id="settings-card">
-            <div class="card-header">
-                <div class="section-icon"><i class="fas fa-cog"></i></div>
-                <h2>Configuração do Google Sheets</h2>
-            </div>
-            <div class="field">
-                <label for="sheets-url">URL do Google Apps Script *</label>
-                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbzNebBzePHFfsEiyYdrZBL8VbbsmwZHv5DcYQk1iipDNr3cWt0GDJa8nOmCHs3Gcm2Wbw/exec" autocomplete="off">
-                <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
-                    <i class="fas fa-info-circle"></i> Insira a URL do seu script (implantação do Google Apps Script).
-                </p>
-            </div>
-        </div>
-
         <!-- Ações -->
         <div class="footer-actions">
             <button class="btn-secondary" id="clear-btn">
@@ -745,6 +730,11 @@
 
     <script>
     // ═══════════════════════════════════════════════
+    // CONSTANTES (apenas o programador altera aqui)
+    // ═══════════════════════════════════════════════
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzNebBzePHFfsEiyYdrZBL8VbbsmwZHv5DcYQk1iipDNr3cWt0GDJa8nOmCHs3Gcm2Wbw/exec';
+
+    // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
     // ═══════════════════════════════════════════════
     function normalizeDate(dateStr) {
@@ -772,10 +762,10 @@
     const DB_VERSION = 1;
     const STORE = 'registros';
     const DRAFT_KEY = 'diarioDraft';
-    const SHEETS_URL_KEY = '11gFMGNfyuRv4YZItXrBkUuBD3SxnDHeLkMpgpzfn19M';
 
+    // Função que retorna a URL fixa (não usa mais localStorage)
     function getEndpoint() {
-        return localStorage.getItem(SHEETS_URL_KEY) || '';
+        return SCRIPT_URL;
     }
 
     let dbPromise = null;
@@ -1131,10 +1121,7 @@
         if (isSyncing || !navigator.onLine) return;
 
         const endpoint = getEndpoint();
-        if (!endpoint) {
-            toast('Configure a URL do Google Sheets nas configurações', 'error');
-            return;
-        }
+        // Não precisa mais verificar se endpoint está vazio, pois é fixo
 
         isSyncing = true;
         const syncIcon = document.getElementById('sync-icon');
@@ -1224,10 +1211,6 @@
     async function importFromSheet() {
         if (isImporting) return;
         const endpoint = getEndpoint();
-        if (!endpoint) {
-            toast('Configure a URL do Google Sheets nas configurações', 'error');
-            return;
-        }
 
         const escolha = confirm(
             'Escolha a opção de importação:\n\n' +
@@ -1357,12 +1340,7 @@
         await updatePendingCount();
         await renderSaved();
 
-        const savedUrl = localStorage.getItem(SHEETS_URL_KEY) || '';
-        document.getElementById('sheets-url').value = savedUrl;
-
-        document.getElementById('sheets-url').addEventListener('input', function() {
-            localStorage.setItem(SHEETS_URL_KEY, this.value.trim());
-        });
+        // Não há mais campo de URL, apenas os eventos normais
 
         document.getElementById('add-diary-btn').addEventListener('click', addDiaryEntry);
         document.getElementById('save-btn').addEventListener('click', saveLocal);
