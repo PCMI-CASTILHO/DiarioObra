@@ -664,9 +664,14 @@
                     <div style="font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:5px;">Relatório do dia</div>
                     <textarea id="diary-text" placeholder="Descreva as atividades realizadas no dia..."></textarea>
                 </div>
-                <button class="btn-add" id="add-diary-btn">
-                    <i class="fas fa-plus"></i> Adicionar
-                </button>
+                <div style="display: flex; gap: 6px; align-self: flex-end;">
+                    <button class="btn-add" id="add-obs-btn" style="background: #10b981;">
+                        <i class="fas fa-plus"></i> Observação
+                    </button>
+                    <button class="btn-add" id="add-occ-btn" style="background: #ef4444;">
+                        <i class="fas fa-exclamation-triangle"></i> Ocorrência
+                    </button>
+                </div>
             </div>
 
             <!-- Lista de entradas -->
@@ -732,19 +737,16 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw6My2iMA8PhZjm7lnScVus6yuTbuDODPmq8yvmtMwpJ2YuD-Bt3hggGimJf_iWkR-YHw/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby1kDtwTUKuxQ1HskQOLkAs2-OBjZUfeU5aHsMCctcHRjYdq6Yz2BZ5KucOYCGaP30Wlw/exec';
 
     // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
     // ═══════════════════════════════════════════════
     function normalizeDate(dateStr) {
         if (!dateStr) return '';
-        // Se já estiver no formato YYYY-MM-DD, retorna
         if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
-        // Tenta extrair a parte da data de uma string ISO
         const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
         if (match) return match[1];
-        // Se não conseguir, retorna vazio ou a própria string
         return dateStr;
     }
 
@@ -763,7 +765,6 @@
     const STORE = 'registros';
     const DRAFT_KEY = 'diarioDraft';
 
-    // Função que retorna a URL fixa (não usa mais localStorage)
     function getEndpoint() {
         return SCRIPT_URL;
     }
@@ -819,16 +820,16 @@
     // ═══════════════════════════════════════════════
     // DIARY ENTRIES
     // ═══════════════════════════════════════════════
-    function addDiaryEntry() {
+    function addDiaryEntry(tipo) {
         const dateEl = document.getElementById('diary-date');
         const textEl = document.getElementById('diary-text');
-        const date = dateEl.value; // já YYYY-MM-DD
+        const date = dateEl.value;
         const text = textEl.value.trim();
 
         if (!date) { toast('Selecione a data da entrada', 'error'); return; }
         if (!text) { toast('Escreva o relatório do dia', 'error'); return; }
 
-        state.diario.push({ data: date, texto: text });
+        state.diario.push({ data: date, texto: text, tipo: tipo });
         state.diario.sort((a, b) => a.data.localeCompare(b.data));
 
         dateEl.value = '';
@@ -836,7 +837,7 @@
 
         renderDiary();
         scheduleDraft();
-        toast('Entrada adicionada', 'success');
+        toast(`Entrada (${tipo}) adicionada`, 'success');
     }
 
     function renderDiary() {
@@ -853,8 +854,14 @@
         empty.style.display = 'none';
 
         state.diario.forEach((entry, idx) => {
+            const tipo = entry.tipo || 'Observação'; // padrão para registros antigos
+            const bgColor = tipo === 'Observação' ? '#d1fae5' : '#fee2e2'; // verde ou vermelho claro
+            const borderColor = tipo === 'Observação' ? '#10b981' : '#ef4444';
+
             const el = document.createElement('div');
             el.className = 'diary-entry';
+            el.style.backgroundColor = bgColor;
+            el.style.borderLeftColor = borderColor;
             el.innerHTML = `
                 <div class="entry-date">${formatDateBR(entry.data)}</div>
                 <div class="entry-text">${escHtml(entry.texto)}</div>
@@ -876,7 +883,6 @@
 
     function formatDateBR(iso) {
         if (!iso) return '–';
-        // Normaliza para YYYY-MM-DD antes de exibir
         const data = normalizeDate(iso);
         const [y, m, d] = data.split('-');
         return `${d}/${m}/${y}`;
@@ -936,7 +942,7 @@
             granja: f.granja,
             tipoServico: f.tipoServico,
             situacao: f.situacao,
-            diario: f.diario, // já com datas normalizadas
+            diario: f.diario,
             sincronizado: false,
             syncedAt: null,
             serverId: existing?.serverId || null
@@ -1010,11 +1016,11 @@
         });
         document.getElementById('situacao').value = state.situacao;
 
-        // Normaliza as datas do diário ao carregar
         if (rec.diario && Array.isArray(rec.diario)) {
             state.diario = rec.diario.map(entry => ({
                 data: normalizeDate(entry.data),
-                texto: entry.texto
+                texto: entry.texto,
+                tipo: entry.tipo || 'Observação'   // ← padrão para registros antigos
             }));
         } else {
             state.diario = [];
@@ -1096,11 +1102,11 @@
                 });
                 document.getElementById('situacao').value = state.situacao;
 
-                // Normaliza datas do rascunho (embora já devam estar corretas)
                 if (d.formData.diario && Array.isArray(d.formData.diario)) {
                     state.diario = d.formData.diario.map(entry => ({
                         data: normalizeDate(entry.data),
-                        texto: entry.texto
+                        texto: entry.texto,
+                        tipo: entry.tipo || 'Observação'
                     }));
                 } else {
                     state.diario = [];
@@ -1121,7 +1127,6 @@
         if (isSyncing || !navigator.onLine) return;
 
         const endpoint = getEndpoint();
-        // Não precisa mais verificar se endpoint está vazio, pois é fixo
 
         isSyncing = true;
         const syncIcon = document.getElementById('sync-icon');
@@ -1138,7 +1143,7 @@
             let errorCount = 0;
 
             for (const rec of pending) {
-                const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '' }];
+                const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '', tipo: 'Observação' }];
                 const rows = entries.map(entry => ({
                     syncedAt:    new Date().toISOString(),
                     id:          rec.id,
@@ -1148,8 +1153,9 @@
                     granja:      rec.granja,
                     tipoServico: rec.tipoServico,
                     situacao:    rec.situacao,
-                    data:        entry.data, // já YYYY-MM-DD
-                    texto:       entry.texto
+                    data:        entry.data,
+                    texto:       entry.texto,
+                    episodio:    entry.tipo || 'Observação'   // ← NOVO CAMPO
                 }));
 
                 try {
@@ -1259,10 +1265,11 @@
                     continue;
                 }
 
-                // Normaliza as datas das entradas do diário
+                // Normaliza as datas e garante o campo tipo (episodio vindo da planilha)
                 const diarioNormalizado = (rec.diario || []).map(entry => ({
                     data: normalizeDate(entry.data),
-                    texto: entry.texto
+                    texto: entry.texto,
+                    tipo: entry.episodio || 'Observação'   // ← mapeia episodio para tipo
                 }));
 
                 const novoRegistro = {
@@ -1340,9 +1347,10 @@
         await updatePendingCount();
         await renderSaved();
 
-        // Não há mais campo de URL, apenas os eventos normais
+        // Botões de adicionar
+        document.getElementById('add-obs-btn').addEventListener('click', () => addDiaryEntry('Observação'));
+        document.getElementById('add-occ-btn').addEventListener('click', () => addDiaryEntry('Ocorrência'));
 
-        document.getElementById('add-diary-btn').addEventListener('click', addDiaryEntry);
         document.getElementById('save-btn').addEventListener('click', saveLocal);
         document.getElementById('clear-btn').addEventListener('click', clearForm);
         document.getElementById('sync-btn').addEventListener('click', () => {
@@ -1353,7 +1361,7 @@
         document.getElementById('import-btn').addEventListener('click', importFromSheet);
 
         document.getElementById('diary-text').addEventListener('keydown', e => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry();
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry('Observação'); // atalho para observação
         });
 
         ['cliente','cidade','granja'].forEach(id => {
