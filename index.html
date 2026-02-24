@@ -226,7 +226,7 @@
             min-height: 90px;
         }
 
-        /* Serviço tipo — botões de seleção */
+        /* Serviço tipo / Situação — botões de seleção */
         .service-type-group {
             display: flex;
             gap: 8px;
@@ -676,6 +676,22 @@
                     Nenhuma entrada registrada ainda.<br>Adicione o primeiro registro do dia acima.
                 </div>
             </div>
+
+            <!-- Situação da Obra (novo campo) -->
+            <div style="margin-top: 1.5rem;">
+                <label style="display:block; font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px;">
+                    Situação *
+                </label>
+                <div class="service-type-group" id="situacao-group">
+                    <button type="button" class="service-type-btn active" data-value="Em andamento">
+                        <i class="fas fa-spinner" style="margin-right:4px"></i> Em andamento
+                    </button>
+                    <button type="button" class="service-type-btn" data-value="Finalizada">
+                        <i class="fas fa-check-circle" style="margin-right:4px"></i> Finalizada
+                    </button>
+                </div>
+                <input type="hidden" id="situacao" value="Em andamento">
+            </div>
         </div>
 
         <!-- Configurações de Sincronização -->
@@ -686,10 +702,9 @@
             </div>
             <div class="field">
                 <label for="sheets-url">URL do Google Apps Script *</label>
-                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbxFux90GWHY2le72tQGfsOKaDCJ0mVYOa3V_7RJ6us1Rce-pRzNtPP23C-yEe3ulhVKJg/exec" autocomplete="off">
+                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbzNebBzePHFfsEiyYdrZBL8VbbsmwZHv5DcYQk1iipDNr3cWt0GDJa8nOmCHs3Gcm2Wbw/exec" autocomplete="off">
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
                     <i class="fas fa-info-circle"></i>
-    
                 </p>
             </div>
         </div>
@@ -729,7 +744,8 @@
     // ═══════════════════════════════════════════════
     const state = {
         tipoServico: '',
-        diario: [],         // [{data, texto}]
+        situacao: 'Em andamento',   // novo campo
+        diario: [],                  // [{data, texto}]
         editId: null
     };
 
@@ -775,6 +791,7 @@
             cidade: document.getElementById('cidade').value.trim(),
             granja: document.getElementById('granja').value.trim(),
             tipoServico: state.tipoServico,
+            situacao: state.situacao,                // <-- novo
             diario: [...state.diario]
         };
     }
@@ -785,6 +802,7 @@
         if (!f.cidade)  { toast('Preencha o campo Cidade – UF', 'error'); return false; }
         if (!f.granja)  { toast('Preencha o campo Granja / Núcleo', 'error'); return false; }
         if (!f.tipoServico) { toast('Selecione o Tipo de Serviço', 'error'); return false; }
+        if (!f.situacao) { toast('Selecione a Situação', 'error'); return false; }  // <-- novo
         if (f.diario.length === 0) { toast('Adicione ao menos uma entrada ao diário', 'error'); return false; }
         return true;
     }
@@ -862,12 +880,25 @@
     // ═══════════════════════════════════════════════
     // TIPO SERVIÇO
     // ═══════════════════════════════════════════════
-    document.querySelectorAll('.service-type-btn').forEach(btn => {
+    document.querySelectorAll('#tipo-servico-group .service-type-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.querySelectorAll('.service-type-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('#tipo-servico-group .service-type-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             state.tipoServico = btn.dataset.value;
             document.getElementById('tipo-servico').value = state.tipoServico;
+            scheduleDraft();
+        });
+    });
+
+    // ═══════════════════════════════════════════════
+    // SITUAÇÃO (novo)
+    // ═══════════════════════════════════════════════
+    document.querySelectorAll('#situacao-group .service-type-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('#situacao-group .service-type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            state.situacao = btn.dataset.value;
+            document.getElementById('situacao').value = state.situacao;
             scheduleDraft();
         });
     });
@@ -895,6 +926,7 @@
             cidade: f.cidade,
             granja: f.granja,
             tipoServico: f.tipoServico,
+            situacao: f.situacao,              // <-- novo
             diario: f.diario,
             sincronizado: false,
             syncedAt: null,
@@ -935,7 +967,7 @@
                     <div class="record-icon ${rec.sincronizado ? 'synced' : ''}"></div>
                     <div class="record-info">
                         <div class="record-title">${rec.cliente || '–'}</div>
-                        <div class="record-meta">${rec.granja || '–'} · ${rec.tipoServico || '–'} · ${date} · ${rec.diario?.length || 0} entrada(s)</div>
+                        <div class="record-meta">${rec.granja || '–'} · ${rec.tipoServico || '–'} · ${rec.situacao || '–'} · ${date} · ${rec.diario?.length || 0} entrada(s)</div>
                     </div>
                 </div>
                 <div class="record-actions">
@@ -959,9 +991,16 @@
         document.getElementById('granja').value = rec.granja || '';
 
         state.tipoServico = rec.tipoServico || '';
-        document.querySelectorAll('.service-type-btn').forEach(btn => {
+        document.querySelectorAll('#tipo-servico-group .service-type-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.value === state.tipoServico);
         });
+
+        // Carregar situação
+        state.situacao = rec.situacao || 'Em andamento';
+        document.querySelectorAll('#situacao-group .service-type-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.value === state.situacao);
+        });
+        document.getElementById('situacao').value = state.situacao;
 
         state.diario = rec.diario ? JSON.parse(JSON.stringify(rec.diario)) : [];
         state.editId = rec.id;
@@ -987,8 +1026,15 @@
         document.getElementById('cliente').value = '';
         document.getElementById('cidade').value = '';
         document.getElementById('granja').value = '';
-        document.querySelectorAll('.service-type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#tipo-servico-group .service-type-btn').forEach(b => b.classList.remove('active'));
         state.tipoServico = '';
+
+        // Reset situação para padrão
+        document.querySelectorAll('#situacao-group .service-type-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector('#situacao-group .service-type-btn[data-value="Em andamento"]').classList.add('active');
+        state.situacao = 'Em andamento';
+        document.getElementById('situacao').value = 'Em andamento';
+
         state.diario = [];
         state.editId = null;
         document.getElementById('diary-date').value = '';
@@ -1023,10 +1069,19 @@
                 document.getElementById('cliente').value = d.formData.cliente || '';
                 document.getElementById('cidade').value = d.formData.cidade || '';
                 document.getElementById('granja').value = d.formData.granja || '';
+
                 state.tipoServico = d.formData.tipoServico || '';
-                document.querySelectorAll('.service-type-btn').forEach(b => {
+                document.querySelectorAll('#tipo-servico-group .service-type-btn').forEach(b => {
                     b.classList.toggle('active', b.dataset.value === state.tipoServico);
                 });
+
+                // Carregar situação do rascunho
+                state.situacao = d.formData.situacao || 'Em andamento';
+                document.querySelectorAll('#situacao-group .service-type-btn').forEach(b => {
+                    b.classList.toggle('active', b.dataset.value === state.situacao);
+                });
+                document.getElementById('situacao').value = state.situacao;
+
                 state.diario = d.formData.diario || [];
                 renderDiary();
             }
@@ -1074,6 +1129,7 @@
                     cidade:      rec.cidade,
                     granja:      rec.granja,
                     tipoServico: rec.tipoServico,
+                    situacao:    rec.situacao,                // <-- novo
                     data:        entry.data,
                     texto:       entry.texto
                 }));
@@ -1195,7 +1251,7 @@
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry();
         });
 
-        // draft on change
+        // draft on change (incluindo situação é atualizado via evento dos botões)
         ['cliente','cidade','granja'].forEach(id => {
             document.getElementById(id).addEventListener('input', scheduleDraft);
         });
