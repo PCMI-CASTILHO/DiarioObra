@@ -677,7 +677,7 @@
                 </div>
             </div>
 
-            <!-- Situação da Obra (novo campo) -->
+            <!-- Situação da Obra -->
             <div style="margin-top: 1.5rem;">
                 <label style="display:block; font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px;">
                     Situação *
@@ -702,9 +702,9 @@
             </div>
             <div class="field">
                 <label for="sheets-url">URL do Google Apps Script *</label>
-                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbzNebBzePHFfsEiyYdrZBL8VbbsmwZHv5DcYQk1iipDNr3cWt0GDJa8nOmCHs3Gcm2Wbw/exec" autocomplete="off">
+                <input type="url" id="sheets-url" placeholder="https://script.google.com/macros/s/AKfycbw6My2iMA8PhZjm7lnScVus6yuTbuDODPmq8yvmtMwpJ2YuD-Bt3hggGimJf_iWkR-YHw/exec" autocomplete="off">
                 <p style="font-size:0.75rem; color:var(--text-muted); margin-top:6px;">
-                    <i class="fas fa-info-circle"></i>
+                    <i class="fas fa-info-circle"></i> Insira a URL do seu script (implantação do Google Apps Script).
                 </p>
             </div>
         </div>
@@ -719,11 +719,16 @@
             </button>
         </div>
 
-        <!-- Registros salvos -->
+        <!-- Registros salvos (agora com botão Importar) -->
         <div class="card" id="saved-section" style="margin-top:1.5rem;">
-            <div class="card-header">
-                <div class="section-icon"><i class="fas fa-history"></i></div>
-                <h2>Registros Salvos <span id="pending-label" style="font-size:0.75rem; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-muted); text-transform:none; letter-spacing:0; margin-left:4px;"></span></h2>
+            <div class="card-header" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <div class="section-icon"><i class="fas fa-history"></i></div>
+                    <h2>Registros Salvos <span id="pending-label" style="font-size:0.75rem; font-weight:500; font-family:'IBM Plex Mono',monospace; color:var(--text-muted); text-transform:none; letter-spacing:0; margin-left:4px;"></span></h2>
+                </div>
+                <button class="btn-secondary" id="import-btn" style="padding: 6px 12px; font-size:0.8rem;">
+                    <i class="fas fa-download"></i> Importar Registros
+                </button>
             </div>
             <div id="saved-list" class="diary-entries">
                 <p style="font-size:0.85rem; color:var(--text-muted);">Nenhum registro salvo ainda.</p>
@@ -744,8 +749,8 @@
     // ═══════════════════════════════════════════════
     const state = {
         tipoServico: '',
-        situacao: 'Em andamento',   // novo campo
-        diario: [],                  // [{data, texto}]
+        situacao: 'Em andamento',
+        diario: [],
         editId: null
     };
 
@@ -791,7 +796,7 @@
             cidade: document.getElementById('cidade').value.trim(),
             granja: document.getElementById('granja').value.trim(),
             tipoServico: state.tipoServico,
-            situacao: state.situacao,                // <-- novo
+            situacao: state.situacao,
             diario: [...state.diario]
         };
     }
@@ -802,7 +807,7 @@
         if (!f.cidade)  { toast('Preencha o campo Cidade – UF', 'error'); return false; }
         if (!f.granja)  { toast('Preencha o campo Granja / Núcleo', 'error'); return false; }
         if (!f.tipoServico) { toast('Selecione o Tipo de Serviço', 'error'); return false; }
-        if (!f.situacao) { toast('Selecione a Situação', 'error'); return false; }  // <-- novo
+        if (!f.situacao) { toast('Selecione a Situação', 'error'); return false; }
         if (f.diario.length === 0) { toast('Adicione ao menos uma entrada ao diário', 'error'); return false; }
         return true;
     }
@@ -820,7 +825,6 @@
         if (!text) { toast('Escreva o relatório do dia', 'error'); return; }
 
         state.diario.push({ data: date, texto: text });
-        // ordenar por data
         state.diario.sort((a, b) => a.data.localeCompare(b.data));
 
         dateEl.value = '';
@@ -835,7 +839,6 @@
         const container = document.getElementById('diary-entries');
         const empty = document.getElementById('diary-empty');
 
-        // remove entries mas mantém o empty placeholder
         Array.from(container.querySelectorAll('.diary-entry')).forEach(el => el.remove());
 
         if (state.diario.length === 0) {
@@ -891,7 +894,7 @@
     });
 
     // ═══════════════════════════════════════════════
-    // SITUAÇÃO (novo)
+    // SITUAÇÃO
     // ═══════════════════════════════════════════════
     document.querySelectorAll('#situacao-group .service-type-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -926,7 +929,7 @@
             cidade: f.cidade,
             granja: f.granja,
             tipoServico: f.tipoServico,
-            situacao: f.situacao,              // <-- novo
+            situacao: f.situacao,
             diario: f.diario,
             sincronizado: false,
             syncedAt: null,
@@ -995,7 +998,6 @@
             btn.classList.toggle('active', btn.dataset.value === state.tipoServico);
         });
 
-        // Carregar situação
         state.situacao = rec.situacao || 'Em andamento';
         document.querySelectorAll('#situacao-group .service-type-btn').forEach(btn => {
             btn.classList.toggle('active', btn.dataset.value === state.situacao);
@@ -1029,7 +1031,6 @@
         document.querySelectorAll('#tipo-servico-group .service-type-btn').forEach(b => b.classList.remove('active'));
         state.tipoServico = '';
 
-        // Reset situação para padrão
         document.querySelectorAll('#situacao-group .service-type-btn').forEach(b => b.classList.remove('active'));
         document.querySelector('#situacao-group .service-type-btn[data-value="Em andamento"]').classList.add('active');
         state.situacao = 'Em andamento';
@@ -1075,7 +1076,6 @@
                     b.classList.toggle('active', b.dataset.value === state.tipoServico);
                 });
 
-                // Carregar situação do rascunho
                 state.situacao = d.formData.situacao || 'Em andamento';
                 document.querySelectorAll('#situacao-group .service-type-btn').forEach(b => {
                     b.classList.toggle('active', b.dataset.value === state.situacao);
@@ -1119,7 +1119,6 @@
             let errorCount = 0;
 
             for (const rec of pending) {
-                // Expande diário: uma linha por entrada
                 const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '' }];
                 const rows = entries.map(entry => ({
                     syncedAt:    new Date().toISOString(),
@@ -1129,20 +1128,19 @@
                     cidade:      rec.cidade,
                     granja:      rec.granja,
                     tipoServico: rec.tipoServico,
-                    situacao:    rec.situacao,                // <-- novo
+                    situacao:    rec.situacao,
                     data:        entry.data,
                     texto:       entry.texto
                 }));
 
                 try {
-                    const resp = await fetch(endpoint, {
+                    await fetch(endpoint, {
                         method: 'POST',
-                        mode: 'no-cors', // Google Apps Script exige isso
+                        mode: 'no-cors',
                         headers: { 'Content-Type': 'text/plain' },
                         body: JSON.stringify({ rows, chave: rec.chave })
                     });
 
-                    // com mode:'no-cors' o status é sempre opaque (0), mas o envio ocorreu
                     rec.sincronizado = true;
                     rec.syncedAt = new Date().toISOString();
                     await db.put(STORE, rec);
@@ -1183,6 +1181,100 @@
         } else {
             badge.style.display = 'none';
             label.textContent = '';
+        }
+    }
+
+    // ═══════════════════════════════════════════════
+    // IMPORTAR REGISTROS DA PLANILHA
+    // ═══════════════════════════════════════════════
+    let isImporting = false;
+
+    async function importFromSheet() {
+        if (isImporting) return;
+        const endpoint = getEndpoint();
+        if (!endpoint) {
+            toast('Configure a URL do Google Sheets nas configurações', 'error');
+            return;
+        }
+
+        const escolha = confirm(
+            'Escolha a opção de importação:\n\n' +
+            'OK     → Substituir TODOS os registros locais pelos da planilha.\n' +
+            'Cancelar → Importar apenas registros NOVOS (que não existem localmente).'
+        );
+        const substituirTudo = escolha;
+
+        isImporting = true;
+        const importBtn = document.getElementById('import-btn');
+        const originalText = importBtn.innerHTML;
+        importBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Importando...';
+        importBtn.disabled = true;
+
+        try {
+            // Faz a requisição GET para obter todos os registros (use ?action=getAll se quiser, mas o backend atual já responde com registros)
+            const response = await fetch(endpoint, {
+                method: 'GET',
+                mode: 'cors'
+            });
+            if (!response.ok) throw new Error('Erro na requisição');
+            const data = await response.json();
+            if (data.status !== 'ok') throw new Error(data.message || 'Erro desconhecido');
+
+            const registros = data.registros || [];
+            if (registros.length === 0) {
+                toast('Nenhum registro encontrado na planilha.', 'info');
+                return;
+            }
+
+            const db = await initDB();
+
+            if (substituirTudo) {
+                const tx = db.transaction(STORE, 'readwrite');
+                await tx.objectStore(STORE).clear();
+                await tx.done;
+                toast('Registros locais apagados. Recriando...', 'info');
+            }
+
+            let importados = 0;
+            let ignorados = 0;
+
+            for (const rec of registros) {
+                const existente = await db.get(STORE, Number(rec.id)).catch(() => null);
+                if (!substituirTudo && existente) {
+                    ignorados++;
+                    continue;
+                }
+
+                const novoRegistro = {
+                    id: Number(rec.id),
+                    chave: rec.chave,
+                    createdAt: rec.createdAt || new Date(Number(rec.id)).toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    cliente: rec.cliente,
+                    cidade: rec.cidade,
+                    granja: rec.granja,
+                    tipoServico: rec.tipoServico,
+                    situacao: rec.situacao || 'Em andamento',
+                    diario: rec.diario || [],
+                    sincronizado: true,
+                    syncedAt: new Date().toISOString(),
+                    serverId: null
+                };
+                await db.put(STORE, novoRegistro);
+                importados++;
+            }
+
+            await updatePendingCount();
+            await renderSaved();
+            toast(`Importação concluída: ${importados} registros importados, ${ignorados} ignorados.`, 'success');
+
+        } catch (err) {
+            console.error(err);
+            toast('Erro ao importar: ' + err.message, 'error');
+        } finally {
+            isImporting = false;
+            importBtn.innerHTML = originalText;
+            importBtn.disabled = false;
         }
     }
 
@@ -1228,16 +1320,13 @@
         await updatePendingCount();
         await renderSaved();
 
-        // Carregar URL salva do Google Sheets
         const savedUrl = localStorage.getItem(SHEETS_URL_KEY) || '';
         document.getElementById('sheets-url').value = savedUrl;
 
-        // Salvar URL quando alterada
         document.getElementById('sheets-url').addEventListener('input', function() {
             localStorage.setItem(SHEETS_URL_KEY, this.value.trim());
         });
 
-        // events
         document.getElementById('add-diary-btn').addEventListener('click', addDiaryEntry);
         document.getElementById('save-btn').addEventListener('click', saveLocal);
         document.getElementById('clear-btn').addEventListener('click', clearForm);
@@ -1246,23 +1335,22 @@
             attemptSync();
         });
 
-        // Textarea: Ctrl+Enter para adicionar
+        // Botão Importar
+        document.getElementById('import-btn').addEventListener('click', importFromSheet);
+
         document.getElementById('diary-text').addEventListener('keydown', e => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry();
         });
 
-        // draft on change (incluindo situação é atualizado via evento dos botões)
         ['cliente','cidade','granja'].forEach(id => {
             document.getElementById(id).addEventListener('input', scheduleDraft);
         });
 
-        // default diary date = today
         document.getElementById('diary-date').value = new Date().toISOString().slice(0, 10);
 
         window.addEventListener('online', () => { updateStatus(); attemptSync(); });
         window.addEventListener('offline', updateStatus);
 
-        // polling
         syncInterval = setInterval(() => { if (navigator.onLine) attemptSync(); }, 30000);
     });
     </script>
