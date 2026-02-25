@@ -573,6 +573,100 @@
 
         .sync-btn:hover { background: rgba(255,255,255,0.25); }
         .sync-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* ── Photo Upload ── */
+        .photo-upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #f8fafc;
+            margin-top: 1.5rem;
+            user-select: none;
+        }
+        .photo-upload-area:hover {
+            border-color: var(--blue-main);
+            background: var(--blue-light);
+        }
+        .photo-upload-area.drag-over {
+            border-color: var(--blue-main);
+            background: var(--blue-light);
+            transform: scale(1.01);
+        }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(78px, 1fr));
+            gap: 8px;
+            margin-top: 12px;
+        }
+        .photo-thumb {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1.5px solid var(--border);
+            animation: slideIn 0.2s ease;
+        }
+        .photo-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .photo-thumb .thumb-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0);
+            transition: background 0.2s;
+            display: flex;
+            align-items: flex-start;
+            justify-content: flex-end;
+            padding: 4px;
+        }
+        .photo-thumb:hover .thumb-overlay { background: rgba(0,0,0,0.15); }
+        .photo-thumb .remove-photo {
+            background: rgba(220,38,38,0.9);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .photo-thumb .remove-photo:hover { background: #dc2626; }
+        .photo-thumb .thumb-status {
+            position: absolute;
+            bottom: 3px;
+            left: 3px;
+            font-size: 10px;
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-weight: 600;
+            font-family: 'IBM Plex Mono', monospace;
+        }
+        .photo-thumb .thumb-status.uploaded {
+            background: rgba(5,150,105,0.85);
+            color: #fff;
+        }
+        .photo-thumb .thumb-status.pending {
+            background: rgba(217,119,6,0.85);
+            color: #fff;
+        }
+        .photo-counter {
+            margin-top: 8px;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-align: right;
+            font-family: 'IBM Plex Mono', monospace;
+        }
     </style>
 </head>
 <body>
@@ -697,6 +791,24 @@
                 </div>
                 <input type="hidden" id="situacao" value="Em andamento">
             </div>
+
+            <!-- Fotos -->
+            <div style="margin-top: 1.5rem;">
+                <label style="display:block; font-size:0.72rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:8px;">
+                    <i class="fas fa-camera" style="margin-right:4px;"></i> Fotos
+                    <span style="font-weight:400; text-transform:none; letter-spacing:0; font-size:0.7rem;">(opcional · máx. 15)</span>
+                </label>
+
+                <div class="photo-upload-area" id="photo-drop-area">
+                    <i class="fas fa-images" style="font-size:1.8rem; color:#94a3b8; margin-bottom:8px; display:block;"></i>
+                    <div style="font-size:0.88rem; color:var(--text-muted); font-weight:500;">Toque aqui para adicionar fotos</div>
+                    <div style="font-size:0.75rem; color:#94a3b8; margin-top:4px;">JPG, PNG ou WEBP · até 15 imagens</div>
+                </div>
+                <input type="file" id="photo-input" accept="image/*" multiple style="display:none">
+
+                <div class="photo-grid" id="photo-grid"></div>
+                <div class="photo-counter" id="photo-counter" style="display:none;"></div>
+            </div>
         </div>
 
         <!-- Ações -->
@@ -737,7 +849,7 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbynzJoG5SOyaNp6MpIV8Q4uwn0rqGjkivUNxnMHaH5yKfeVz5KOa3wZPFRAYFCsZstU2g/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTvcdxSEO3xNhG3mZ7e2KT3FEP_0w4G4O-4olOw34iDuyCxsXEfXAFd2_aB7wgDKQerQ/exec';
 
     // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
@@ -757,7 +869,8 @@
         tipoServico: '',
         situacao: 'Em andamento',
         diario: [],
-        editId: null
+        editId: null,
+        fotos: []   // [{ dataUrl, nome, link }]
     };
 
     const DB_NAME = 'DiarioObraDB';
@@ -802,7 +915,8 @@
             granja: document.getElementById('granja').value.trim(),
             tipoServico: state.tipoServico,
             situacao: state.situacao,
-            diario: [...state.diario]
+            diario: [...state.diario],
+            fotos: state.fotos.map(f => ({ dataUrl: f.dataUrl || null, nome: f.nome, link: f.link || null }))
         };
     }
 
@@ -893,6 +1007,112 @@
     }
 
     // ═══════════════════════════════════════════════
+    // FOTOS
+    // ═══════════════════════════════════════════════
+    const MAX_FOTOS = 15;
+
+    function handlePhotoSelect(files) {
+        const remaining = MAX_FOTOS - state.fotos.length;
+        if (remaining <= 0) { toast('Limite de 15 fotos atingido', 'error'); return; }
+
+        const toAdd = Array.from(files).slice(0, remaining);
+        if (files.length > remaining) toast(`Apenas ${remaining} foto(s) aceita(s) — limite de 15`, 'info');
+
+        let loaded = 0;
+        toAdd.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = e => {
+                state.fotos.push({ dataUrl: e.target.result, nome: file.name, link: null });
+                loaded++;
+                if (loaded === toAdd.length) { renderPhotos(); scheduleDraft(); }
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function renderPhotos() {
+        const grid = document.getElementById('photo-grid');
+        const counter = document.getElementById('photo-counter');
+        grid.innerHTML = '';
+
+        if (state.fotos.length === 0) {
+            counter.style.display = 'none';
+            return;
+        }
+
+        counter.style.display = 'block';
+        counter.textContent = `${state.fotos.length} / ${MAX_FOTOS} foto(s)`;
+
+        state.fotos.forEach((foto, idx) => {
+            const statusLabel = foto.link ? 'uploaded' : 'pending';
+            const statusText  = foto.link ? '✓ Drive' : '⏳ local';
+
+            const thumb = document.createElement('div');
+            thumb.className = 'photo-thumb';
+            thumb.innerHTML = `
+                <img src="${foto.dataUrl || foto.link}" alt="foto ${idx+1}">
+                <div class="thumb-overlay">
+                    <button class="remove-photo" data-idx="${idx}" title="Remover foto">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="thumb-status ${statusLabel}">${statusText}</div>
+            `;
+            thumb.querySelector('.remove-photo').addEventListener('click', ev => {
+                ev.stopPropagation();
+                state.fotos.splice(parseInt(ev.currentTarget.dataset.idx), 1);
+                renderPhotos();
+                scheduleDraft();
+            });
+            grid.appendChild(thumb);
+        });
+    }
+
+    async function uploadFotosToDrive() {
+        const pendentes = state.fotos.filter(f => !f.link);
+        if (pendentes.length === 0) return true;
+
+        toast(`Enviando ${pendentes.length} foto(s) ao Drive...`, 'info');
+
+        const payload = {
+            action: 'uploadFotos',
+            fotos: pendentes.map(f => {
+                const parts = f.dataUrl.split(',');
+                const mime  = parts[0].match(/:(.*?);/)[1];
+                return { base64: parts[1], mime, nome: f.nome };
+            })
+        };
+
+        try {
+            const res  = await fetch(SCRIPT_URL, {
+                method:  'POST',
+                mode:    'cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body:    JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.status === 'ok' && Array.isArray(data.links)) {
+                let li = 0;
+                state.fotos.forEach(f => {
+                    if (!f.link) {
+                        f.link    = data.links[li++];
+                        f.dataUrl = f.dataUrl; // keep for display
+                    }
+                });
+                renderPhotos();
+                toast('Fotos enviadas ao Drive!', 'success');
+                return true;
+            } else {
+                throw new Error(data.message || 'Resposta inválida');
+            }
+        } catch(err) {
+            console.error('Erro ao enviar fotos:', err);
+            toast('Erro ao enviar fotos — serão enviadas na próxima sincronização', 'error');
+            return false;
+        }
+    }
+
+    // ═══════════════════════════════════════════════
     // TIPO SERVIÇO
     // ═══════════════════════════════════════════════
     document.querySelectorAll('#tipo-servico-group .service-type-btn').forEach(btn => {
@@ -923,6 +1143,12 @@
     // ═══════════════════════════════════════════════
     async function saveLocal() {
         if (!validate()) return;
+
+        // Upload fotos pendentes se estiver online
+        if (navigator.onLine && state.fotos.some(f => !f.link)) {
+            await uploadFotosToDrive();
+        }
+
         const f = collect();
         const db = await initDB();
 
@@ -943,6 +1169,7 @@
             tipoServico: f.tipoServico,
             situacao: f.situacao,
             diario: f.diario,
+            fotos: f.fotos,
             sincronizado: false,
             syncedAt: null,
             serverId: existing?.serverId || null
@@ -1025,6 +1252,15 @@
         } else {
             state.diario = [];
         }
+
+        // Restaurar fotos
+        state.fotos = (rec.fotos || []).map(f => ({
+            dataUrl: f.dataUrl || f.link || '',
+            nome:    f.nome    || 'foto',
+            link:    f.link    || null
+        }));
+        renderPhotos();
+
         state.editId = rec.id;
         renderDiary();
         saveDraft();
@@ -1058,6 +1294,8 @@
 
         state.diario = [];
         state.editId = null;
+        state.fotos = [];
+        renderPhotos();
         document.getElementById('diary-date').value = '';
         document.getElementById('diary-text').value = '';
         renderDiary();
@@ -1074,8 +1312,11 @@
     }
 
     function saveDraft() {
+        const f = collect();
+        // Exclui dataUrls do draft (muito grandes para localStorage)
+        const fotosParaDraft = f.fotos.map(foto => ({ nome: foto.nome, link: foto.link, dataUrl: null }));
         const draft = {
-            formData: collect(),
+            formData: { ...f, fotos: fotosParaDraft },
             editId: state.editId
         };
         try { localStorage.setItem(DRAFT_KEY, JSON.stringify(draft)); } catch(e) {}
@@ -1111,6 +1352,15 @@
                 } else {
                     state.diario = [];
                 }
+
+                // Restaurar fotos do draft (apenas links, sem dataUrls)
+                state.fotos = (d.formData.fotos || []).filter(f => f.link).map(f => ({
+                    dataUrl: f.link,
+                    nome:    f.nome || 'foto',
+                    link:    f.link
+                }));
+                renderPhotos();
+
                 renderDiary();
             }
             state.editId = d.editId || null;
@@ -1143,6 +1393,37 @@
             let errorCount = 0;
 
             for (const rec of pending) {
+                // Fazer upload de fotos pendentes antes de sincronizar
+                const fotosPendentes = (rec.fotos || []).filter(f => !f.link);
+                if (fotosPendentes.length > 0) {
+                    try {
+                        const payload = {
+                            action: 'uploadFotos',
+                            fotos: fotosPendentes.map(f => {
+                                const parts = (f.dataUrl || '').split(',');
+                                const mime  = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+                                return { base64: parts[1] || '', mime, nome: f.nome };
+                            })
+                        };
+                        const res  = await fetch(endpoint, {
+                            method:  'POST',
+                            mode:    'cors',
+                            headers: { 'Content-Type': 'text/plain' },
+                            body:    JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        if (data.status === 'ok' && Array.isArray(data.links)) {
+                            let li = 0;
+                            rec.fotos.forEach(f => { if (!f.link) f.link = data.links[li++]; });
+                            await db.put(STORE, rec);
+                        }
+                    } catch(uploadErr) {
+                        console.warn('Erro ao enviar fotos no sync:', uploadErr);
+                    }
+                }
+
+                const fotosLinks = (rec.fotos || []).map(f => f.link).filter(Boolean).join(', ');
+
                 const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '', tipo: 'Normal' }];
                 const rows = entries.map(entry => ({
                     syncedAt:    new Date().toISOString(),
@@ -1155,7 +1436,8 @@
                     situacao:    rec.situacao,
                     data:        entry.data,
                     texto:       entry.texto,
-                    episodio:    entry.tipo || 'Normal'   // NOVO CAMPO
+                    episodio:    entry.tipo || 'Normal',
+                    fotos:       fotosLinks
                 }));
 
                 try {
@@ -1283,6 +1565,7 @@
                     tipoServico: rec.tipoServico,
                     situacao: rec.situacao || 'Em andamento',
                     diario: diarioNormalizado,
+                    fotos: (rec.fotos || []),
                     sincronizado: true,
                     syncedAt: new Date().toISOString(),
                     serverId: null
@@ -1353,6 +1636,27 @@
 
         document.getElementById('save-btn').addEventListener('click', saveLocal);
         document.getElementById('clear-btn').addEventListener('click', clearForm);
+
+        // ── Fotos ──
+        const photoInput   = document.getElementById('photo-input');
+        const photoDropArea = document.getElementById('photo-drop-area');
+
+        photoDropArea.addEventListener('click', () => photoInput.click());
+        photoInput.addEventListener('change', e => {
+            if (e.target.files.length) {
+                handlePhotoSelect(e.target.files);
+                e.target.value = ''; // permite re-selecionar os mesmos arquivos
+            }
+        });
+
+        // Drag and drop
+        photoDropArea.addEventListener('dragover', e => { e.preventDefault(); photoDropArea.classList.add('drag-over'); });
+        photoDropArea.addEventListener('dragleave', () => photoDropArea.classList.remove('drag-over'));
+        photoDropArea.addEventListener('drop', e => {
+            e.preventDefault();
+            photoDropArea.classList.remove('drag-over');
+            if (e.dataTransfer.files.length) handlePhotoSelect(e.dataTransfer.files);
+        });
         document.getElementById('sync-btn').addEventListener('click', () => {
             if (!navigator.onLine) { toast('Sem conexão', 'error'); return; }
             attemptSync();
