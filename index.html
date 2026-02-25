@@ -533,6 +533,9 @@
         .record-btn:hover { background: #f1f5f9; }
         .record-btn.danger { color: var(--red); border-color: #fecaca; }
         .record-btn.danger:hover { background: #fee2e2; }
+        .record-btn.pdf { color: #dc2626; border-color: #fecaca; }
+        .record-btn.pdf:hover { background: #fff1f1; }
+        .record-btn.pdf:disabled { opacity: 0.5; cursor: not-allowed; }
 
         /* ── Sync badge ── */
         .sync-badge {
@@ -849,8 +852,9 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby_XoVQnJPWqQGc5O2MAQz5ZqQcDHSY-TEbj0yvLz_vN0wNG9u1fRqJA5rx5uxUrGN8TQ/exec';
-
+    const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycby_XoVQnJPWqQGc5O2MAQz5ZqQcDHSY-TEbj0yvLz_vN0wNG9u1fRqJA5rx5uxUrGN8TQ/exec';
+    const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMUfZTiCvO-27b3GcPsyuckde0GvqnyAUlPtBCwBGmDIn3-7H6aNW_ySUSPzg7UeFj9Q/exec';
+	
     // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
     // ═══════════════════════════════════════════════
@@ -1214,10 +1218,12 @@
                 </div>
                 <div class="record-actions">
                     <button class="record-btn edit-rec" data-id="${rec.id}"><i class="fas fa-edit"></i> Editar</button>
+                    <button class="record-btn pdf pdf-rec" data-id="${rec.id}" data-chave="${rec.chave}" ${!rec.sincronizado ? 'title="Sincronize antes de gerar o PDF"' : ''}><i class="fas fa-file-pdf"></i> PDF</button>
                     <button class="record-btn danger del-rec" data-id="${rec.id}"><i class="fas fa-trash"></i></button>
                 </div>
             `;
             el.querySelector('.edit-rec').addEventListener('click', () => loadRecord(rec.id));
+            el.querySelector('.pdf-rec').addEventListener('click', () => gerarPdf(rec.chave, rec.sincronizado));
             el.querySelector('.del-rec').addEventListener('click', () => deleteRecord(rec.id));
             list.appendChild(el);
         });
@@ -1266,6 +1272,44 @@
         saveDraft();
         window.scrollTo({ top: 0, behavior: 'smooth' });
         toast('Registro carregado para edição', 'info');
+    }
+
+    // ═══════════════════════════════════════════════
+    // GERAR PDF
+    // ═══════════════════════════════════════════════
+    async function gerarPdf(chave, sincronizado) {
+        if (!sincronizado) {
+            toast('Sincronize o registro antes de gerar o PDF', 'error');
+            return;
+        }
+        if (!navigator.onLine) {
+            toast('Sem conexão. Conecte-se à internet para gerar o PDF.', 'error');
+            return;
+        }
+        if (PDF_SCRIPT_URL.startsWith('COLE_AQUI')) {
+            toast('Configure a URL do gerador de PDF no código (PDF_SCRIPT_URL)', 'error');
+            return;
+        }
+
+        toast('Gerando PDF, aguarde...', 'info');
+
+        try {
+            const res  = await fetch(PDF_SCRIPT_URL, {
+                method : 'POST',
+                mode   : 'cors',
+                headers: { 'Content-Type': 'text/plain' },
+                body   : JSON.stringify({ chave })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                toast('PDF gerado! Abrindo...', 'success');
+                window.open(data.link, '_blank');
+            } else {
+                toast('Erro ao gerar PDF: ' + (data.message || 'desconhecido'), 'error');
+            }
+        } catch (err) {
+            toast('Erro de conexão ao gerar PDF: ' + err.message, 'error');
+        }
     }
 
     async function deleteRecord(id) {
