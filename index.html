@@ -853,7 +853,7 @@
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
     const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycby_XoVQnJPWqQGc5O2MAQz5ZqQcDHSY-TEbj0yvLz_vN0wNG9u1fRqJA5rx5uxUrGN8TQ/exec';
-    const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwMUfZTiCvO-27b3GcPsyuckde0GvqnyAUlPtBCwBGmDIn3-7H6aNW_ySUSPzg7UeFj9Q/exec';
+    const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxrYjrHl5S015uDvCR2lcUvuSvPT_UM5Nqe6ulBqEW1tIJoCDq9YcoxLlV87Idez_Vm2Q/exec';
 	
     // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
@@ -1277,40 +1277,19 @@
     // ═══════════════════════════════════════════════
     // GERAR PDF
     // ═══════════════════════════════════════════════
-    async function gerarPdf(chave, sincronizado) {
-        if (!sincronizado) {
-            toast('Sincronize o registro antes de gerar o PDF', 'error');
-            return;
-        }
-        if (!navigator.onLine) {
-            toast('Sem conexão. Conecte-se à internet para gerar o PDF.', 'error');
-            return;
-        }
-        if (PDF_SCRIPT_URL.startsWith('https://script.google.com/macros/s/AKfycbwMUfZTiCvO-27b3GcPsyuckde0GvqnyAUlPtBCwBGmDIn3-7H6aNW_ySUSPzg7UeFj9Q/exec')) {
-            toast('Configure a URL do gerador de PDF no código (PDF_SCRIPT_URL)', 'error');
-            return;
-        }
-
-        toast('Gerando PDF, aguarde...', 'info');
-
-        try {
-            const res  = await fetch(PDF_SCRIPT_URL, {
-                method : 'POST',
-                mode   : 'cors',
-                headers: { 'Content-Type': 'text/plain' },
-                body   : JSON.stringify({ chave })
-            });
-            const data = await res.json();
-            if (data.status === 'ok') {
-                toast('PDF gerado! Abrindo...', 'success');
-                window.open(data.link, '_blank');
-            } else {
-                toast('Erro ao gerar PDF: ' + (data.message || 'desconhecido'), 'error');
-            }
-        } catch (err) {
-            toast('Erro de conexão ao gerar PDF: ' + err.message, 'error');
-        }
-    }
+    // Localize o botão ou a função de clique e altere para isto:
+	async function GerarPDF(chave) {
+	    const URL_DO_GERADOR = "https://script.google.com/macros/s/AKfycbxrYjrHl5S015uDvCR2lcUvuSvPT_UM5Nqe6ulBqEW1tIJoCDq9YcoxLlV87Idez_Vm2Q/exec";
+	    
+	    // Em vez de fetch POST, vamos abrir uma nova aba com o parâmetro na URL (GET)
+	    // Isso evita o erro de CORS completamente.
+	    const urlFinal = URL_DO_GERADOR + "?chave=" + encodeURIComponent(chave);
+	    
+	    toast("Gerando PDF... Aguarde.", "info");
+	    
+	    // Abre o script em uma nova aba. O script vai processar e mostrar o resultado.
+	    window.open(urlFinal, '_blank');
+	}
 
     async function deleteRecord(id) {
         const db = await initDB();
