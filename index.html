@@ -1014,10 +1014,10 @@
 
     <script>
     // ═══════════════════════════════════════════════
-    // CONSTANTES
+    // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycby_XoVQnJPWqQGc5O2MAQz5ZqQcDHSY-TEbj0yvLz_vN0wNG9u1fRqJA5rx5uxUrGN8TQ/exec';
-    const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy90zFUUs5DlFso_TKKVZmtjIzjwLLbYCSbnbgNPX9u4dnATu9w0O-KFjeT3GRth_sVw/exec';
+    const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycbx8gKfpOLTEHMygwA1e6mYav5h3d26XmbmFJpPgJC6M9IRCL-3ufpgpTsameOKJ9BVqaQ/exec';
+    const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwZ8iFHsv69DoO6FaWuDOeLOJUQmigi9welOYjeLP5qG3TAXKi-LYj4lnPrEKXgiCY19Q/exec';
 	
     // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
@@ -1698,21 +1698,24 @@
                 }
 
                 const fotosLinks = (rec.fotos || []).map(f => f.link).filter(Boolean).join(', ');
+                const matsJson   = JSON.stringify(rec.materiaisRetorno || []);
 
                 const entries = (rec.diario && rec.diario.length > 0) ? rec.diario : [{ data: '', texto: '', tipo: 'Normal' }];
-                const rows = entries.map(entry => ({
-                    syncedAt:    new Date().toISOString(),
-                    id:          rec.id,
-                    chave:       rec.chave,
-                    cliente:     rec.cliente,
-                    cidade:      rec.cidade,
-                    granja:      rec.granja,
-                    tipoServico: rec.tipoServico,
-                    situacao:    rec.situacao,
-                    data:        entry.data,
-                    texto:       entry.texto,
-                    episodio:    entry.tipo || 'Normal',
-                    fotos:       fotosLinks
+                const rows = entries.map((entry, idx) => ({
+                    syncedAt:          new Date().toISOString(),
+                    id:                rec.id,
+                    chave:             rec.chave,
+                    cliente:           rec.cliente,
+                    cidade:            rec.cidade,
+                    granja:            rec.granja,
+                    tipoServico:       rec.tipoServico,
+                    situacao:          rec.situacao,
+                    data:              entry.data,
+                    texto:             entry.texto,
+                    episodio:          entry.tipo || 'Normal',
+                    fotos:             fotosLinks,
+                    // Materiais só na primeira linha para não duplicar na planilha
+                    materiaisRetorno:  idx === 0 ? matsJson : ''
                 }));
 
                 try {
@@ -1841,6 +1844,7 @@
                     situacao: rec.situacao || 'Em andamento',
                     diario: diarioNormalizado,
                     fotos: (rec.fotos || []),
+                    materiaisRetorno: (rec.materiaisRetorno || []),
                     sincronizado: true,
                     syncedAt: new Date().toISOString(),
                     serverId: null
