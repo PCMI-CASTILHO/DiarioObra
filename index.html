@@ -389,6 +389,71 @@
 
         .btn-danger-text:hover { background: #fee2e2; }
 
+        #mat-ret-input:focus,
+        #mat-ret-qtd:focus {
+            border-color: var(--green) !important;
+            box-shadow: 0 0 0 3px rgba(5,150,105,0.12) !important;
+        }
+
+        /* ── Return Materials ── */
+        .material-input-row {
+            display: grid;
+            grid-template-columns: 1fr 100px auto;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 1rem;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1.5px dashed var(--border);
+        }
+
+        @media (max-width: 600px) {
+            .material-input-row { grid-template-columns: 1fr 80px auto; }
+        }
+
+        .material-item {
+            background: #fff;
+            border: 1.5px solid var(--border);
+            border-left: 4px solid #059669;
+            border-radius: 8px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.2s ease;
+        }
+
+        .material-item .mat-qty {
+            background: #d1fae5;
+            color: #059669;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.8rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 5px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .material-item .mat-nome {
+            font-size: 0.88rem;
+            color: var(--text-main);
+            flex: 1;
+            line-height: 1.4;
+        }
+
+        .material-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .mat-empty {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding: 1.5rem 1rem;
+        }
+
+        .mat-empty i { font-size: 1.4rem; color: #cbd5e1; margin-bottom: 6px; display: block; }
+
         /* ── Diary entries list ── */
         .diary-entries { display: flex; flex-direction: column; gap: 10px; }
 
@@ -814,6 +879,105 @@
             </div>
         </div>
 
+        <!-- Materiais de Retorno -->
+        <div class="card">
+            <div class="card-header">
+                <div class="section-icon" style="background:#d1fae5; color:#059669;"><i class="fas fa-undo-alt"></i></div>
+                <h2>Materiais de Retorno</h2>
+            </div>
+
+            <div class="material-input-row">
+                <div>
+                    <div style="font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:5px;">Material</div>
+                    <input type="text" id="mat-ret-input" list="mat-ret-list"
+                           placeholder="Digite ou selecione o material..."
+                           style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:0.88rem; font-family:'IBM Plex Sans',sans-serif; color:var(--text-main); background:#fff; outline:none; transition: border-color 0.2s, box-shadow 0.2s;">
+                    <datalist id="mat-ret-list">
+                        <option value="MALETA DE REPOSIÇÃO">
+                        <option value="PAINEL MONTADO SEQ">
+                        <option value="COMPRESSOR DE AR MOTOMIL MONTADO 24 LT">
+                        <option value="SILO E BALANÇA PULMÃO MONTADO">
+                        <option value="MOEGA DA BALANÇA SIMPLES">
+                        <option value="DA BALANÇA MOEGA DUPLA">
+                        <option value="EIXO 75mm + RESTRIÇÃO MONTADO">
+                        <option value="EIXO 89mm + RESTRIÇÃO MONTADO">
+                        <option value="EIXO 100mm + RESTRIÇÃO MONTADO">
+                        <option value="ABRAÇADEIRA METÁLICA 98MM a 108MM PARA GAVETA">
+                        <option value="ABRAÇADEIRA METÁLICA 98MM a 108MM PARA TRAQUEIA">
+                        <option value="ABRAÇADEIRA PLÁSTICA GRANDE">
+                        <option value="ABRAÇADEIRA PLÁSTICA PEQUENA">
+                        <option value="BOTOEIRA DE PULSO COM CAIXA E CONTATO NO + LAMPÂDA">
+                        <option value="BUCHA M10 COM PARAFUSO ATARRACHANTE">
+                        <option value="BUCHA M8 COM PARAFUSO ATARRACHANTE">
+                        <option value="CABO 10X0,5MM">
+                        <option value="CABO 12X0,5MM">
+                        <option value="CABO 2X0,5MM">
+                        <option value="CABO 3 X 0,5">
+                        <option value="CABO 3X2,5">
+                        <option value="CABO 4X0,5">
+                        <option value="CABO 4X22 AWG METROS">
+                        <option value="CABO DE AÇO 3MM">
+                        <option value="CATRACA PARA CABO DE AÇO">
+                        <option value="CLIPS PARA CABO DE AÇO">
+                        <option value="CABO RIGIDO">
+                        <option value="CAÍDA EM T 75MM">
+                        <option value="CAÍDA EM T 89MM">
+                        <option value="CAÍDA EM T 100MM">
+                        <option value="CAIXA DE PASSAGEM">
+                        <option value="CAIXA PARA SENSORES MAX. E MIN.">
+                        <option value="CONJUNTO LUBRIFIL MONTADO">
+                        <option value="ELETROCALHA 100 X 50MM BARRA COM 3 METROS">
+                        <option value="ELETROCALHA 50 X 50MM BARRA C/ TAMPA COM 3 METROS">
+                        <option value="FIO COMANDO 1MM">
+                        <option value="FLANGE PLASTICO 32MM">
+                        <option value="FLANGE PLASTICO 50MM">
+                        <option value="LUVA PVC 100MM">
+                        <option value="CANO PVC 100MM 2 METROS">
+                        <option value="CURVA PVC 10MM 45°">
+                        <option value="TRAQUÉIA 100MM X 40CM">
+                        <option value="TRAQUÉIA 100MM X 15CM">
+                        <option value="MANGUEIRA PU8MM">
+                        <option value="ENGATE RAPIDO FEMÊA MONTADO">
+                        <option value="ENGATE RAPIDO MACHO MONTADO (MACHO+LUVA+CONEXÃO 1/4-8)">
+                        <option value="PARAFUSO 1/4 X 1/2 SEXTAVADO">
+                        <option value="PARAFUSO BROCANTE 20MM">
+                        <option value="PG SENSOR MAX. E MIN.">
+                        <option value="SENSOR CAPACITIVO IMPORTADO (GAVAZI VERMELHO DE MAX)">
+                        <option value="SUPORTE PROTEÇÃO DO SENSOR">
+                        <option value="SUPORTE ELETROCALHA">
+                        <option value="UNIÃO EM T 8MM METALICA + ABRAÇADEIRAS SIMPLEX">
+                        <option value="TERMINAL TUBULAR 0,75MM BRANCO">
+                        <option value="TERMINAL TUBULAR 1 MM VERMELHO">
+                        <option value="TERMINAL TUBULAR 2,5 MM AZUL">
+                        <option value="TERMINAL TUBULAR 2 MM DUPLO AZUL">
+                        <option value="CORDA DE ALGODÃO">
+                        <option value="BORNE SAQUE 2,5MM BEGE">
+                        <option value="BORNE SAQUE 2,5MM AZUL">
+                        <option value="CASINHA DAS GAVETAS SIMPLES">
+                        <option value="CASINHA DAS GAVETAS DUPLAS">
+                        <option value="BALANÇA DE GALO COM PLATAFORMA ENSACADEIRA">
+                    </datalist>
+                </div>
+                <div>
+                    <div style="font-size:0.7rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em; color:var(--text-muted); margin-bottom:5px;">Qtd</div>
+                    <input type="number" id="mat-ret-qtd" min="1" value="1"
+                           style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:8px; font-size:0.88rem; font-family:'IBM Plex Mono',sans-serif; color:var(--text-main); background:#fff; outline:none;">
+                </div>
+                <div style="align-self: flex-end;">
+                    <button class="btn-add" id="add-mat-ret-btn" style="background:#059669; margin-top:0;">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="material-list" id="mat-ret-list-display">
+                <div class="mat-empty" id="mat-ret-empty">
+                    <i class="fas fa-box-open"></i>
+                    Nenhum material de retorno adicionado.
+                </div>
+            </div>
+        </div>
+
         <!-- Ações -->
         <div class="footer-actions">
             <button class="btn-secondary" id="clear-btn">
@@ -850,7 +1014,7 @@
 
     <script>
     // ═══════════════════════════════════════════════
-    // CONSTANTES (apenas o programador altera aqui)
+    // CONSTANTES
     // ═══════════════════════════════════════════════
     const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycby_XoVQnJPWqQGc5O2MAQz5ZqQcDHSY-TEbj0yvLz_vN0wNG9u1fRqJA5rx5uxUrGN8TQ/exec';
     const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwy90zFUUs5DlFso_TKKVZmtjIzjwLLbYCSbnbgNPX9u4dnATu9w0O-KFjeT3GRth_sVw/exec';
@@ -874,7 +1038,8 @@
         situacao: 'Em andamento',
         diario: [],
         editId: null,
-        fotos: []   // [{ dataUrl, nome, link }]
+        fotos: [],           // [{ dataUrl, nome, link }]
+        materiaisRetorno: [] // [{ nome, qtd }]
     };
 
     const DB_NAME = 'DiarioObraDB';
@@ -920,7 +1085,8 @@
             tipoServico: state.tipoServico,
             situacao: state.situacao,
             diario: [...state.diario],
-            fotos: state.fotos.map(f => ({ dataUrl: f.dataUrl || null, nome: f.nome, link: f.link || null }))
+            fotos: state.fotos.map(f => ({ dataUrl: f.dataUrl || null, nome: f.nome, link: f.link || null })),
+            materiaisRetorno: [...state.materiaisRetorno]
         };
     }
 
@@ -1008,6 +1174,60 @@
 
     function escHtml(str) {
         return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    }
+
+    // ═══════════════════════════════════════════════
+    // MATERIAIS DE RETORNO
+    // ═══════════════════════════════════════════════
+    function addMaterialRetorno() {
+        const nomeEl = document.getElementById('mat-ret-input');
+        const qtdEl  = document.getElementById('mat-ret-qtd');
+        const nome   = nomeEl.value.trim();
+        const qtd    = parseInt(qtdEl.value) || 1;
+
+        if (!nome) { toast('Digite ou selecione um material', 'error'); return; }
+        if (qtd < 1) { toast('Quantidade deve ser ao menos 1', 'error'); return; }
+
+        state.materiaisRetorno.push({ nome, qtd });
+        nomeEl.value = '';
+        qtdEl.value = '1';
+        renderMateriaisRetorno();
+        scheduleDraft();
+        toast('Material de retorno adicionado', 'success');
+    }
+
+    function renderMateriaisRetorno() {
+        const container = document.getElementById('mat-ret-list-display');
+        const empty     = document.getElementById('mat-ret-empty');
+
+        Array.from(container.querySelectorAll('.material-item')).forEach(el => el.remove());
+
+        if (state.materiaisRetorno.length === 0) {
+            empty.style.display = 'block';
+            return;
+        }
+        empty.style.display = 'none';
+
+        state.materiaisRetorno.forEach((item, idx) => {
+            const el = document.createElement('div');
+            el.className = 'material-item';
+            el.innerHTML = `
+                <div class="mat-qty">${item.qtd}x</div>
+                <div class="mat-nome">${escHtml(item.nome)}</div>
+                <div class="entry-actions">
+                    <button class="btn-danger-text" data-midx="${idx}" title="Remover">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            `;
+            el.querySelector('.btn-danger-text').addEventListener('click', function() {
+                state.materiaisRetorno.splice(parseInt(this.dataset.midx), 1);
+                renderMateriaisRetorno();
+                scheduleDraft();
+                toast('Material removido', 'info');
+            });
+            container.appendChild(el);
+        });
     }
 
     // ═══════════════════════════════════════════════
@@ -1174,6 +1394,7 @@
             situacao: f.situacao,
             diario: f.diario,
             fotos: f.fotos,
+            materiaisRetorno: f.materiaisRetorno || [],
             sincronizado: false,
             syncedAt: null,
             serverId: existing?.serverId || null
@@ -1267,6 +1488,10 @@
         }));
         renderPhotos();
 
+        // Restaurar materiais de retorno
+        state.materiaisRetorno = (rec.materiaisRetorno || []).map(m => ({ nome: m.nome, qtd: m.qtd }));
+        renderMateriaisRetorno();
+
         state.editId = rec.id;
         renderDiary();
         saveDraft();
@@ -1339,7 +1564,9 @@
         state.diario = [];
         state.editId = null;
         state.fotos = [];
+        state.materiaisRetorno = [];
         renderPhotos();
+        renderMateriaisRetorno();
         document.getElementById('diary-date').value = '';
         document.getElementById('diary-text').value = '';
         renderDiary();
@@ -1404,6 +1631,10 @@
                     link:    f.link
                 }));
                 renderPhotos();
+
+                // Restaurar materiais de retorno do draft
+                state.materiaisRetorno = (d.formData.materiaisRetorno || []).map(m => ({ nome: m.nome, qtd: m.qtd }));
+                renderMateriaisRetorno();
 
                 renderDiary();
             }
@@ -1680,6 +1911,12 @@
 
         document.getElementById('save-btn').addEventListener('click', saveLocal);
         document.getElementById('clear-btn').addEventListener('click', clearForm);
+        document.getElementById('add-mat-ret-btn').addEventListener('click', addMaterialRetorno);
+
+        // Tecla Enter no campo de material de retorno
+        document.getElementById('mat-ret-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') { e.preventDefault(); addMaterialRetorno(); }
+        });
 
         // ── Fotos ──
         const photoInput   = document.getElementById('photo-input');
