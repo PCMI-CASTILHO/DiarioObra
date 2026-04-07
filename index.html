@@ -1328,11 +1328,22 @@
             if (data.status === 'ok' && Array.isArray(data.links)) {
                 let li = 0;
                 state.fotos.forEach(f => {
-                    if (!f.link) {
-                        f.link    = data.links[li++];
-                        f.dataUrl = f.dataUrl; // keep for display
-                    }
+                    if (!f.link) f.link = data.links[li++];
                 });
+                // Persiste os links no IndexedDB imediatamente para evitar
+                // re-upload duplicado caso o attemptSync rode em seguida
+                if (state.editId) {
+                    try {
+                        const db = await initDB();
+                        const rec = await db.get(STORE, Number(state.editId)).catch(() => null);
+                        if (rec) {
+                            rec.fotos = state.fotos;
+                            await db.put(STORE, rec);
+                        }
+                    } catch(dbErr) {
+                        console.warn('Aviso: não foi possível persistir links no DB:', dbErr);
+                    }
+                }
                 renderPhotos();
                 toast('Fotos enviadas ao Drive!', 'success');
                 return true;
