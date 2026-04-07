@@ -1026,7 +1026,7 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycbyZJvdWWVbiGw_wy7kiyJ4kzegBTH5InNST48yps9vVzhvX02kbTPEAS2ZDzcSQDnUHaw/exec';
+    const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycbzSWDyh1RnNDzRTrw46p6pE4b0k70Ad-i6G22dx_Z3P5x_YHOsYgK9WJJ5YsexCDvtmrA/exec';
     const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7gjnAs-DzD9Aera04vKmRE3PjK3ZbGM-MB09wojwhZHqM7xGzemXiYNQp-hsONwcAmQ/exec';
 	
     // ═══════════════════════════════════════════════
@@ -1303,8 +1303,13 @@
     }
 
     async function uploadFotosToDrive() {
-        const pendentes = state.fotos.filter(f => !f.link);
+        const pendentes = state.fotos.filter(f => !f.link && !f.uploadEmAndamento);
         if (pendentes.length === 0) return true;
+
+        // Marca as fotos como "em andamento" ANTES de enviar.
+        // Isso impede que o attemptSync rode em paralelo e faça
+        // um segundo upload das mesmas fotos (causando duplicatas).
+        pendentes.forEach(f => { f.uploadEmAndamento = true; });
 
         toast(`Enviando ${pendentes.length} foto(s) ao Drive...`, 'info');
 
@@ -1328,7 +1333,10 @@
             if (data.status === 'ok' && Array.isArray(data.links)) {
                 let li = 0;
                 state.fotos.forEach(f => {
-                    if (!f.link) f.link = data.links[li++];
+                    if (f.uploadEmAndamento) {
+                        f.link = data.links[li++];
+                        delete f.uploadEmAndamento;
+                    }
                 });
                 // Persiste os links no IndexedDB imediatamente para evitar
                 // re-upload duplicado caso o attemptSync rode em seguida
@@ -1351,8 +1359,10 @@
                 throw new Error(data.message || 'Resposta inválida');
             }
         } catch(err) {
+            // Remove a flag para permitir nova tentativa futura (ex: após corrigir permissão)
+            pendentes.forEach(f => { delete f.uploadEmAndamento; });
             console.error('Erro ao enviar fotos:', err);
-            toast('Erro ao enviar fotos — serão enviadas na próxima sincronização', 'error');
+            toast('Erro ao enviar fotos — verifique as permissões do Web App', 'error');
             return false;
         }
     }
@@ -1689,8 +1699,10 @@
             let errorCount = 0;
 
             for (const rec of pending) {
-                // Fazer upload de fotos pendentes antes de sincronizar
-                const fotosPendentes = (rec.fotos || []).filter(f => !f.link);
+                // Fazer upload de fotos pendentes antes de sincronizar.
+                // Ignora fotos com uploadEmAndamento=true (já sendo enviadas por uploadFotosToDrive)
+                // para evitar duplicatas no Drive.
+                const fotosPendentes = (rec.fotos || []).filter(f => !f.link && !f.uploadEmAndamento);
                 if (fotosPendentes.length > 0) {
                     try {
                         const payload = {
