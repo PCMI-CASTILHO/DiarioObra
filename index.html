@@ -777,6 +777,25 @@
     <!-- ── Main ── -->
     <main class="main-content">
 
+        <!-- Equipe Técnica -->
+        <div class="card">
+            <div class="card-header">
+                <div class="section-icon"><i class="fas fa-hard-hat"></i></div>
+                <h2>Equipe Técnica</h2>
+            </div>
+
+            <div class="field-group cols-2">
+                <div class="field">
+                    <label for="tecnico">Técnico Responsável *</label>
+                    <input type="text" id="tecnico" placeholder="Nome do técnico responsável" required>
+                </div>
+                <div class="field">
+                    <label for="auxiliares">Auxiliares</label>
+                    <input type="text" id="auxiliares" placeholder="Ex: João Silva, Maria Souza">
+                </div>
+            </div>
+        </div>
+
         <!-- Dados Gerais -->
         <div class="card">
             <div class="card-header">
@@ -1026,8 +1045,8 @@
     // ═══════════════════════════════════════════════
     // CONSTANTES (apenas o programador altera aqui)
     // ═══════════════════════════════════════════════
-    const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycbxz5bKAV57mXwPXwZGm7xR2Ot2sf2PkVhIHtGUBFF3JgjVM-6l_K6blkBUNCsJHFYDrdg/exec';
-    const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw7gjnAs-DzD9Aera04vKmRE3PjK3ZbGM-MB09wojwhZHqM7xGzemXiYNQp-hsONwcAmQ/exec';
+    const SCRIPT_URL     = 'https://script.google.com/macros/s/AKfycbwXMNaRCQ_XITDr7zZY41JHl4fz_F19POHt9bHLhCuww9RwuCzS74q6ce05y_E6eyRDBA/exec';
+    const PDF_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxxHEDS1sWPHqB57rNPIfbU_3_DCgPgjEl8O7aNEM-RC90ZY7vX7EKEts6hnoWy1r2_-g/exec';
 	
     // ═══════════════════════════════════════════════
     // Função auxiliar para normalizar data (YYYY-MM-DD)
@@ -1089,6 +1108,8 @@
     // ═══════════════════════════════════════════════
     function collect() {
         return {
+            tecnico: document.getElementById('tecnico').value.trim(),
+            auxiliares: document.getElementById('auxiliares').value.trim(),
             cliente: document.getElementById('cliente').value.trim(),
             cidade: document.getElementById('cidade').value.trim(),
             granja: document.getElementById('granja').value.trim(),
@@ -1102,6 +1123,7 @@
 
     function validate() {
         const f = collect();
+        if (!f.tecnico) { toast('Preencha o campo Técnico Responsável', 'error'); return false; }
         if (!f.cliente) { toast('Preencha o campo Cliente', 'error'); return false; }
         if (!f.cidade)  { toast('Preencha o campo Cidade – UF', 'error'); return false; }
         if (!f.granja)  { toast('Preencha o campo Granja / Núcleo', 'error'); return false; }
@@ -1418,6 +1440,8 @@
             chave,
             createdAt: existing?.createdAt || new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            tecnico: f.tecnico,
+            auxiliares: f.auxiliares,
             cliente: f.cliente,
             cidade: f.cidade,
             granja: f.granja,
@@ -1486,6 +1510,8 @@
         const rec = await db.get(STORE, Number(id));
         if (!rec) { toast('Registro não encontrado', 'error'); return; }
 
+        document.getElementById('tecnico').value = rec.tecnico || '';
+        document.getElementById('auxiliares').value = rec.auxiliares || '';
         document.getElementById('cliente').value = rec.cliente || '';
         document.getElementById('cidade').value = rec.cidade || '';
         document.getElementById('granja').value = rec.granja || '';
@@ -1581,6 +1607,8 @@
     // CLEAR FORM
     // ═══════════════════════════════════════════════
     function clearForm() {
+        document.getElementById('tecnico').value = '';
+        document.getElementById('auxiliares').value = '';
         document.getElementById('cliente').value = '';
         document.getElementById('cidade').value = '';
         document.getElementById('granja').value = '';
@@ -1630,6 +1658,8 @@
         try {
             const d = JSON.parse(raw);
             if (d.formData) {
+                document.getElementById('tecnico').value = d.formData.tecnico || '';
+                document.getElementById('auxiliares').value = d.formData.auxiliares || '';
                 document.getElementById('cliente').value = d.formData.cliente || '';
                 document.getElementById('cidade').value = d.formData.cidade || '';
                 document.getElementById('granja').value = d.formData.granja || '';
@@ -1738,6 +1768,8 @@
                     syncedAt:          new Date().toISOString(),
                     id:                rec.id,
                     chave:             rec.chave,
+                    tecnico:           rec.tecnico || '',
+                    auxiliares:        rec.auxiliares || '',
                     cliente:           rec.cliente,
                     cidade:            rec.cidade,
                     granja:            rec.granja,
@@ -1870,6 +1902,8 @@
                     chave: rec.chave,
                     createdAt: rec.createdAt || new Date(Number(rec.id)).toISOString(),
                     updatedAt: new Date().toISOString(),
+                    tecnico: rec.tecnico || '',
+                    auxiliares: rec.auxiliares || '',
                     cliente: rec.cliente,
                     cidade: rec.cidade,
                     granja: rec.granja,
@@ -1986,7 +2020,7 @@
             if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') addDiaryEntry('Normal'); // atalho para normal
         });
 
-        ['cliente','cidade','granja'].forEach(id => {
+        ['cliente','cidade','granja','tecnico','auxiliares'].forEach(id => {
             document.getElementById(id).addEventListener('input', scheduleDraft);
         });
 
